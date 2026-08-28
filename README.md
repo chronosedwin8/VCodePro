@@ -56,6 +56,61 @@ Para retirar el recorrido basta con archivar o eliminar los grupos llamados
 
 ---
 
+## Credenciales y archivos que no se versionan
+
+El repositorio guarda código, no configuración. **Ninguna contraseña viaja en Git**, tampoco en
+el historial: un clon recién descargado no arranca hasta que le des sus propias credenciales, y
+eso es intencional.
+
+### De dónde sale cada credencial
+
+| Credencial | De dónde la toma el código | Si no la indicas |
+|---|---|---|
+| Contraseña de MySQL | `includes/config.local.php` o la variable `VCP_DB_PASS` | La conexión falla con un mensaje que remite a este archivo |
+| Servidor, base de datos y usuario | Los mismos dos lugares | Usa `127.0.0.1`, `vcodepro` y `root` |
+| Contraseña del administrador inicial | `VCP_ADMIN_PASS` o el primer argumento de `instalar.php` | El instalador **genera una al azar y la muestra al terminar** |
+| Contraseña del estudiante de recorrido | `VCP_DEMO_PASS` o el segundo argumento de `db/estudiante_demo.php` | Si la cuenta ya existe conserva la suya; si es nueva, genera una y la imprime |
+
+`includes/config.php` solo trae valores por defecto sin secreto y carga
+`includes/config.local.php` cuando existe, de modo que lo definido allí gana siempre. La
+plantilla `includes/config.local.ejemplo.php` sí está en el repositorio: es el archivo que se
+copia y se rellena en cada equipo.
+
+### Archivos ignorados por Git
+
+| Ruta | Motivo |
+|---|---|
+| `includes/config.local.php` | Credenciales del equipo o del servidor |
+| `assets/uploads/entregas/*` | Trabajo entregado por los estudiantes |
+| `assets/uploads/avatares/*` | Imágenes de perfil |
+
+De esas dos carpetas solo se versiona un `.gitkeep`, para conservar la estructura sin subir
+datos personales.
+
+### Clonar el proyecto en otro equipo
+
+```
+git clone https://github.com/chronosedwin8/VCodePro
+cd VCodePro
+
+# Windows
+copy includes\config.local.ejemplo.php includes\config.local.php
+# Linux y macOS
+cp includes/config.local.ejemplo.php includes/config.local.php
+
+# edita includes/config.local.php con las credenciales de ese equipo
+php instalar.php "TuClaveDeAdministrador"
+```
+
+### Lo que sí está escrito en el repositorio
+
+Las contraseñas de las **cuentas de demostración** (`Docente2026*`, `Estudiante2026*` y
+`Cliente2026*`) aparecen en `instalar.php` y en este README a propósito: son cuentas
+desechables para recorrer los cuatro paneles. Cámbialas o elimina esas cuentas antes de abrir
+el portal a personas reales.
+
+---
+
 ## Estructura
 
 ```
@@ -163,6 +218,7 @@ retroalimentación y se registra un intento nuevo.
 - Todas las consultas son preparadas; las entradas se limpian a UTF-8 válido.
 - Subidas restringidas por extensión y tamaño, con nombre aleatorio y ejecución deshabilitada.
 - `includes/` y `db/` bloqueados por `.htaccess`; auditoría de todas las acciones sensibles.
+- Ninguna credencial en el repositorio: ver «Credenciales y archivos que no se versionan».
 
 ---
 
@@ -200,13 +256,15 @@ server {
 
 Lista de comprobación al publicar:
 
-1. Copiar `includes/config.local.ejemplo.php` a `includes/config.local.php` con las credenciales
-   del servidor y `VCP_ENV=produccion`.
-2. Crear un usuario de MySQL propio para la aplicación (no `root`).
-3. Ejecutar `php instalar.php` una vez y después eliminarlo.
+1. Crear `includes/config.local.php` en el servidor a partir de la plantilla, con las
+   credenciales de ese servidor y `VCP_ENV=produccion`. **Sin este archivo la aplicación no
+   conecta**: el repositorio no trae ninguna contraseña.
+2. Crear un usuario de MySQL propio para la aplicación, no `root`, con permisos solo sobre la
+   base de datos del portal.
+3. Ejecutar `php instalar.php "ClaveDelAdministrador"` una vez y después eliminar el archivo.
 4. Dar permiso de escritura a `assets/uploads/`.
 5. Cambiar las contraseñas de demostración y las claves de licencia de ejemplo.
-6. Programar la copia de seguridad de la base de datos.
+6. Programar la copia de seguridad de la base de datos y de `assets/uploads/`, que no está en Git.
 
 Como el prefijo de URL se calcula solo, el mismo código funciona en
 `http://localhost:8080/vcodeproplus/` y en la raíz de `https://www.vcodepro.de/`.
