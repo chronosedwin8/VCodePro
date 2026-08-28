@@ -1,7 +1,7 @@
 /* =============================================================================
    VCodePro — Formulario de contacto (JavaScript puro)
-   Valida los campos en el navegador y prepara el mensaje de correo.
-   El sitio es estático: no hay envío a un servidor propio.
+   Valida los campos en el navegador, registra el mensaje en el portal
+   (portal/api/contacto.php) y deja listo el correo como alternativa.
    ============================================================================= */
 (function () {
   "use strict";
@@ -116,7 +116,7 @@
       datos.mensaje
     ].join("\n");
 
-    var enlace = "mailto:licencias@vcodepro.co" +
+    var enlace = "mailto:licencias@vcodepro.de" +
       "?subject=" + encodeURIComponent("[" + datos.motivo + "] " + datos.institucion) +
       "&body=" + encodeURIComponent(cuerpo);
 
@@ -129,7 +129,27 @@
     confirmacion.scrollIntoView({ behavior: "smooth", block: "center" });
     formulario.hidden = true;
 
-    window.location.href = enlace;
+    /* Registro en el portal. Si el servidor no responde, el mensaje sigue
+       disponible para enviarlo por correo desde el botón de la confirmación. */
+    var cuerpoEnvio = new FormData();
+    Object.keys(datos).forEach(function (k) { cuerpoEnvio.append(k, datos[k]); });
+    cuerpoEnvio.append("institucion", datos.institucion);
+
+    var estado = $("#c-estado-envio");
+    if (estado) { estado.textContent = "Enviando…"; }
+
+    fetch("portal/api/contacto.php", { method: "POST", body: cuerpoEnvio })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (estado) {
+          estado.textContent = d && d.ok
+            ? "Mensaje registrado. Te responderemos al correo indicado."
+            : "No pudimos registrarlo en el servidor; envíalo por correo con el botón de abajo.";
+        }
+      })
+      .catch(function () {
+        if (estado) { estado.textContent = "Sin conexión con el servidor; envíalo por correo con el botón de abajo."; }
+      });
   });
 
   /* ---------- Volver al formulario ---------- */

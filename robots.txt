@@ -2,5 +2,10 @@
 User-agent: *
 Allow: /
 Disallow: /404.html
+Disallow: /portal/
+Disallow: /instalar.php
+Disallow: /includes/
+Disallow: /db/
+Disallow: /assets/uploads/
 
-Sitemap: https://www.vcodepro.co/sitemap.xml
+Sitemap: https://www.vcodepro.de/sitemap.xml

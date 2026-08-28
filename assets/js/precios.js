@@ -241,7 +241,7 @@
       "· Incluye actualizaciones y soporte durante toda la vigencia.",
       "· Cotización de referencia generada en el sitio web de VCodePro.",
       "",
-      "Contacto: licencias@vcodepro.co"
+      "Contacto: licencias@vcodepro.de"
     ].join("\n");
   }
 

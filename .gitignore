@@ -10,3 +10,9 @@ desktop.ini
 # Editores
 .vscode/
 .idea/
+
+# Portal académico
+assets/uploads/entregas/*
+assets/uploads/avatares/*
+!assets/uploads/**/.gitkeep
+includes/config.local.php
