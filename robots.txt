@@ -1,0 +1,6 @@
+# robots.txt — VCodePro
+User-agent: *
+Allow: /
+Disallow: /404.html
+
+Sitemap: https://www.vcodepro.co/sitemap.xml

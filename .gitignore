@@ -1,0 +1,12 @@
+# Archivos comprimidos generados a partir del propio sitio
+sitio.zip
+*.zip
+
+# Basura del sistema operativo
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editores
+.vscode/
+.idea/

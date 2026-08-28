@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="VCodePro">
+  <title>VCodePro</title>
+  <defs>
+    <linearGradient id="vcp-g" x1="10" y1="6" x2="90" y2="94" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38dcf5"/>
+      <stop offset=".55" stop-color="#0a97e6"/>
+      <stop offset="1" stop-color="#1663e0"/>
+    </linearGradient>
+  </defs>
+  <path d="M18 30 L50 88 L82 30" fill="none" stroke="url(#vcp-g)" stroke-width="16"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="58" y="4" width="24" height="11" rx="5.5" fill="url(#vcp-g)"/>
+</svg>
