@@ -283,8 +283,11 @@ retroalimentación y se registra un intento nuevo.
 
 ## Publicación en CloudPanel + nginx
 
+> Guía paso a paso del despliegue inicial: **[DESPLIEGUE.md](DESPLIEGUE.md)**.
+
 El portal no necesita reescrituras: cada página es un archivo real. Basta con servir PHP y
-bloquear las carpetas internas.
+bloquear las carpetas internas. **Los archivos `.htaccess` del repositorio solo funcionan en
+Apache**: en Nginx hay que replicar esas protecciones en el vhost.
 
 ```nginx
 server {
