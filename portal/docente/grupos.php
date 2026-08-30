@@ -73,15 +73,23 @@ $abrirNuevo = get('nuevo') === '1' || !$grupos;
 
 cabecera('Mis grupos', [
     'titulo' => 'Mis grupos',
-    'sub'    => 'Cada grupo tiene un código de ocho caracteres con el que los estudiantes se matriculan solos.',
-    'migas'  => [['Panel', 'portal/docente/index.php'], ['Mis grupos']],
+    'sub'    => es('admin')
+        ? 'Los grupos en los que figuras como docente. Para ver y administrar todos los del colegio, entra en Grupos del panel de administración.'
+        : 'Cada grupo tiene un código de ocho caracteres con el que los estudiantes se matriculan solos.',
+    'migas'  => es('admin')
+        ? [['Panel', 'portal/admin/index.php'], ['Grupos', 'portal/admin/grupos.php'], ['Crear grupo']]
+        : [['Panel', 'portal/docente/index.php'], ['Mis grupos']],
     'acciones' => '<a class="btn" href="' . url('portal/docente/importar.php') . '">Importar de Phidias</a>',
 ]);
 ?>
 <div class="rejilla rej-lat">
   <div>
     <?php if (!$grupos): ?>
-      <?= vacio('Aún no has creado grupos', 'Crea el primero con el formulario de la derecha y comparte el código en clase.') ?>
+      <?= es('admin')
+            ? vacio('No figuras como docente de ningún grupo',
+                    'Crea uno con el formulario de la derecha o impórtalo de Phidias. Los grupos de los demás docentes se administran en Grupos del panel de administración.',
+                    '<a class="btn btn-ghost" href="' . url('portal/admin/grupos.php') . '">Ver todos los grupos</a>')
+            : vacio('Aún no has creado grupos', 'Crea el primero con el formulario de la derecha y comparte el código en clase.') ?>
     <?php else: ?>
       <div class="panel panel-plano">
         <div class="panel-h"><h2><?= count($grupos) ?> grupo(s)</h2></div>

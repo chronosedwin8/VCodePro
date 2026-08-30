@@ -62,8 +62,10 @@ $niveles  = filas('SELECT id, grado, nombre FROM niveles ORDER BY orden');
 
 cabecera('Grupos', [
     'titulo' => 'Grupos del colegio',
-    'sub'    => count($grupos) . ' grupo(s) registrados.',
+    'sub'    => count($grupos) . ' grupo(s) registrados. Aquí se administran todos; para crear uno nuevo usa los botones.',
     'migas'  => [['Panel', 'portal/admin/index.php'], ['Grupos']],
+    'acciones' => '<a class="btn btn-ghost" href="' . url('portal/docente/importar.php') . '">Importar de Phidias</a>'
+                . '<a class="btn" href="' . url('portal/docente/grupos.php?nuevo=1') . '">Crear grupo</a>',
 ]);
 ?>
 <form class="acciones-barra" method="get">
