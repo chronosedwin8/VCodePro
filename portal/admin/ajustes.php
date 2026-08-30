@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/academico.php';
+require_once __DIR__ . '/../../includes/phidias.php';
 
 $u = exigir_rol('admin');
 
@@ -50,6 +51,26 @@ if (es_post()) {
         $n = 0;
         foreach (filas('SELECT id FROM usuarios WHERE rol = "estudiante"') as $x) { revisar_insignias((int) $x['id']); $n++; }
         flash_ok("Se revisaron las insignias de $n estudiante(s).");
+    }
+
+    if ($accion === 'phidias') {
+        guardar_ajuste('phidias_url', post('phidias_url') ?: 'https://ds-barranquilla.phidias.co/rest');
+        // El token solo se reemplaza si se escribe uno nuevo.
+        if (post('phidias_token') !== '') guardar_ajuste('phidias_token', post('phidias_token'));
+        auditar('phidias_configurada');
+        flash_ok('Conexión con Phidias guardada.');
+        redirigir('portal/admin/ajustes.php');
+    }
+
+    if ($accion === 'phidias_probar') {
+        [$ok, $datos, $cuando] = array_pad(phidias_cursos(true), 3, null);
+        if ($ok) {
+            $n = array_sum(array_map(fn($c) => count($c['estudiantes']), $datos));
+            flash_ok('Conexión correcta: ' . count($datos) . ' cursos y ' . $n . ' estudiantes matriculados.');
+        } else {
+            flash_err((string) $datos);
+        }
+        redirigir('portal/admin/ajustes.php');
     }
 
     if ($accion === 'limpiar_sesiones') {
@@ -127,6 +148,33 @@ cabecera('Ajustes', [
       <button class="btn btn-ghost btn-block mb-2" name="accion" value="insignias">Revisar insignias de estudiantes</button>
       <button class="btn btn-ghost btn-block" name="accion" value="limpiar_sesiones">Limpiar tokens vencidos</button>
       <p class="txt-sm txt-muted mt-2 mb-0">Estas tareas son seguras: recalculan valores derivados sin modificar el trabajo de los estudiantes.</p>
+    </form>
+
+    <form method="post" class="panel">
+      <?= csrf_campo() ?>
+      <input type="hidden" name="accion" value="phidias">
+      <div class="panel-h">
+        <h3>Conexión con Phidias</h3>
+        <?= phidias_configurada() ? '<span class="chip chip-verde">Configurada</span>' : '<span class="chip chip-gris">Sin token</span>' ?>
+      </div>
+      <div class="campo">
+        <label for="phidias_url">URL base de la API</label>
+        <input type="url" id="phidias_url" name="phidias_url" value="<?= h(phidias_url()) ?>">
+      </div>
+      <div class="campo">
+        <label for="phidias_token">Token JWT</label>
+        <input type="password" id="phidias_token" name="phidias_token" autocomplete="off"
+               placeholder="<?= phidias_configurada() ? 'Guardado (' . h(phidias_token_pista()) . '). Escribe uno nuevo para reemplazarlo.' : 'Pega aquí el token' ?>">
+        <span class="pista">Se guarda en la base de datos. Si prefieres dejarlo fuera del portal, defínelo en <code>includes/config.local.php</code>: esa constante tiene prioridad.</span>
+      </div>
+      <div class="btn-fila">
+        <button class="btn" type="submit">Guardar</button>
+        <button class="btn btn-ghost" name="accion" value="phidias_probar">Probar conexión</button>
+      </div>
+      <p class="txt-sm txt-muted mt-2 mb-0">
+        La importación de cursos y estudiantes se hace desde
+        <a href="<?= url('portal/docente/importar.php') ?>">Importar de Phidias</a>.
+      </p>
     </form>
 
     <div class="panel">

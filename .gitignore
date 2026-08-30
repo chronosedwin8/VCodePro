@@ -16,3 +16,7 @@ assets/uploads/entregas/*
 assets/uploads/avatares/*
 !assets/uploads/**/.gitkeep
 includes/config.local.php
+
+# Caché de la integración con Phidias
+assets/uploads/cache/*
+!assets/uploads/cache/.gitkeep

@@ -17,3 +17,9 @@ define('DB_CLAVE',   'cambia-esta-clave');
 
 // Entorno: 'produccion' oculta los mensajes de error al visitante.
 putenv('VCP_ENV=produccion');
+
+// -------------------------------------------------------- Phidias (opcional)
+// Integración con la matrícula del colegio. También puede configurarse desde
+// Ajustes del portal; lo definido aquí tiene prioridad.
+// define('PHIDIAS_URL',   'https://ds-barranquilla.phidias.co/rest');
+// define('PHIDIAS_TOKEN', 'pega-aqui-el-token-jwt');

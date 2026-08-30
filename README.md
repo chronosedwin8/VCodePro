@@ -70,6 +70,7 @@ eso es intencional.
 | Servidor, base de datos y usuario | Los mismos dos lugares | Usa `127.0.0.1`, `vcodepro` y `root` |
 | Contraseña del administrador inicial | `VCP_ADMIN_PASS` o el primer argumento de `instalar.php` | El instalador **genera una al azar y la muestra al terminar** |
 | Contraseña del estudiante de recorrido | `VCP_DEMO_PASS` o el segundo argumento de `db/estudiante_demo.php` | Si la cuenta ya existe conserva la suya; si es nueva, genera una y la imprime |
+| Token de Phidias | `PHIDIAS_TOKEN` en `config.local.php`, `VCP_PHIDIAS_TOKEN` o Ajustes del portal | La importación queda deshabilitada con un aviso |
 
 `includes/config.php` solo trae valores por defecto sin secreto y carga
 `includes/config.local.php` cuando existe, de modo que lo definido allí gana siempre. La
@@ -83,8 +84,9 @@ copia y se rellena en cada equipo.
 | `includes/config.local.php` | Credenciales del equipo o del servidor |
 | `assets/uploads/entregas/*` | Trabajo entregado por los estudiantes |
 | `assets/uploads/avatares/*` | Imágenes de perfil |
+| `assets/uploads/cache/*` | Caché de la matrícula descargada de Phidias |
 
-De esas dos carpetas solo se versiona un `.gitkeep`, para conservar la estructura sin subir
+De esas carpetas solo se versiona un `.gitkeep`, para conservar la estructura sin subir
 datos personales.
 
 ### Clonar el proyecto en otro equipo
@@ -111,6 +113,62 @@ el portal a personas reales.
 
 ---
 
+## Integración con Phidias
+
+El portal lee la matrícula del colegio desde la API de Phidias
+(`GET /1/course/consolidate`) y crea con ella los grupos y las cuentas de estudiante.
+Se accede desde **Docente → Importar de Phidias**.
+
+### Cómo llegan los datos
+
+La respuesta viene en tres capas —etapa (KINDERGARTEN, PRIMARIA, SECUNDARIA), curso
+(KLASSE 1 a 12) y grupo (K1A … K12C)— y el portal la aplana a una lista de grupos con sus
+estudiantes. De cada estudiante toma `firstname`, `lastname`, `email` y `code`, y normaliza
+los nombres, que llegan en mayúsculas sostenidas.
+
+El grado se deduce del nombre del grupo: **K10C → 10.º**, y con él se preselecciona el nivel
+del plan de aula. Los cursos de preescolar y de 1.º a 5.º no corresponden a ningún nivel del
+plan (que va de 6.º a 12.º): se pueden importar igual, eligiendo el nivel a mano.
+
+### Tres formas de importar
+
+| Modo | Qué hace |
+|---|---|
+| **Un grupo por curso** | Crea un grupo del portal por cada curso marcado, con su mismo nombre (`K10C`) y todos sus estudiantes |
+| **Un solo grupo** | Crea un grupo con el nombre que elijas y le suma estudiantes de varios cursos a la vez (10A, 10B, 10C…) |
+| **Agregar a un grupo existente** | Suma los estudiantes marcados a un grupo que ya tienes |
+
+En el segundo paso se listan los estudiantes de los cursos elegidos con una casilla cada uno,
+marcadas por defecto: ahí se decide quién entra y quién no.
+
+### Cuentas y contraseñas
+
+- Las cuentas se identifican por el **correo institucional** y por el **código del estudiante**.
+  Si ya existen se reutilizan y se actualizan sus datos; nunca se duplican.
+- Las contraseñas nuevas se generan al azar y **solo pueden descargarse en CSV al terminar la
+  importación**: no se guardan en texto plano.
+- Al matricular a alguien en un grupo con actividades abiertas, sus entregas se crean solas.
+- Los estudiantes sin correo en Phidias no se importan y se listan al final del informe.
+
+### Configuración
+
+El token JWT se puede poner en dos lugares:
+
+```php
+// includes/config.local.php — fuera del repositorio, tiene prioridad
+define('PHIDIAS_URL',   'https://ds-barranquilla.phidias.co/rest');
+define('PHIDIAS_TOKEN', '…');
+```
+
+o desde **Admin → Ajustes → Conexión con Phidias**, que lo guarda en la base de datos y trae un
+botón para probar la conexión. También se admite la variable de entorno `VCP_PHIDIAS_TOKEN`.
+
+La respuesta pesa unos 2 MB, así que se guarda en caché en
+`assets/uploads/cache/` durante tres horas; el botón **Actualizar matrícula** la refresca.
+Al ser una llamada desde el servidor, no hay problemas de CORS ni hace falta ningún proxy.
+
+---
+
 ## Estructura
 
 ```
@@ -124,12 +182,13 @@ vcodeproplus/
 │   ├── helpers.php                Escape, URLs, CSRF, flash, formatos, subidas
 │   ├── auth.php                   Sesión, roles, registro y recuperación
 │   ├── academico.php              Entregas, progreso, rúbrica e insignias
+│   ├── phidias.php                Cliente de la API de matrícula del colegio
 │   └── layout.php                 Cabecera, menú por rol y pie del portal
 ├── portal/
 │   ├── login.php · registro.php · recuperar.php · logout.php
 │   ├── perfil.php · notificaciones.php · 403.php
 │   ├── estudiante/                Panel, actividades, bitácora, portafolio, insignias
-│   ├── docente/                   Grupos, banco, asignaciones, seguimiento, calificación
+│   ├── docente/                   Grupos, importación, banco, seguimiento, calificación
 │   ├── admin/                     Usuarios, currículo, licencias, facturación, auditoría
 │   ├── cliente/                   Licencias, puestos, facturas, soporte, descargas
 │   └── api/                       Guardado por fases, tema y formulario de contacto

@@ -78,6 +78,33 @@ try {
     }
     paso("Esquema aplicado: $creadas tablas verificadas.");
 
+    // ---------------------------------------------- 2b. migraciones ligeras --
+    // CREATE TABLE IF NOT EXISTS no agrega columnas a tablas ya existentes,
+    // así que las incorporaciones posteriores se aplican aquí.
+    $columnas = [
+        ['usuarios', 'codigo_externo', "VARCHAR(40) DEFAULT NULL AFTER tema"],
+        ['usuarios', 'origen',         "VARCHAR(20) NOT NULL DEFAULT 'local' AFTER codigo_externo"],
+        ['grupos',   'curso_externo',  "VARCHAR(60) DEFAULT NULL AFTER codigo"],
+    ];
+    $agregadas = 0;
+    foreach ($columnas as [$tabla, $columna, $definicion]) {
+        $existe = valor('SELECT COUNT(*) FROM information_schema.COLUMNS
+                          WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+                        [DB_NOMBRE, $tabla, $columna], 0);
+        if (!$existe) {
+            $pdo->exec("ALTER TABLE `$tabla` ADD COLUMN `$columna` $definicion");
+            $agregadas++;
+        }
+    }
+    $idxExterno = valor('SELECT COUNT(*) FROM information_schema.STATISTICS
+                          WHERE TABLE_SCHEMA = ? AND TABLE_NAME = "usuarios" AND INDEX_NAME = "idx_usuarios_externo"',
+                        [DB_NOMBRE], 0);
+    if (!$idxExterno) {
+        $pdo->exec('ALTER TABLE usuarios ADD INDEX idx_usuarios_externo (codigo_externo)');
+        $agregadas++;
+    }
+    if ($agregadas) paso("Migraciones aplicadas: $agregadas cambio(s) de estructura.");
+
     // ------------------------------------------------------ 3. niveles ----
     $niveles = require __DIR__ . '/db/seed/niveles.php';
     $idNivel = [];

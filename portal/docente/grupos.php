@@ -75,6 +75,7 @@ cabecera('Mis grupos', [
     'titulo' => 'Mis grupos',
     'sub'    => 'Cada grupo tiene un código de ocho caracteres con el que los estudiantes se matriculan solos.',
     'migas'  => [['Panel', 'portal/docente/index.php'], ['Mis grupos']],
+    'acciones' => '<a class="btn" href="' . url('portal/docente/importar.php') . '">Importar de Phidias</a>',
 ]);
 ?>
 <div class="rejilla rej-lat">
@@ -128,6 +129,10 @@ cabecera('Mis grupos', [
       <?= csrf_campo() ?>
       <input type="hidden" name="accion" value="crear">
       <div class="panel-h"><h3>Nuevo grupo</h3></div>
+      <p class="txt-sm txt-muted">
+        ¿El curso ya existe en la matrícula del colegio?
+        <a href="<?= url('portal/docente/importar.php') ?>">Impórtalo de Phidias</a> con sus estudiantes.
+      </p>
       <div class="campo">
         <label for="nombre">Nombre del grupo</label>
         <input type="text" id="nombre" name="nombre" required placeholder="Ej.: 9.º B · Diseño" <?= $abrirNuevo ? 'autofocus' : '' ?>>

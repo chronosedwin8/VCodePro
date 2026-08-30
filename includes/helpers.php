@@ -30,7 +30,11 @@ function iniciar_sesion(): void {
 }
 
 // ------------------------------------------------------------------ escape --
-function h(?string $s): string {
+/**
+ * Escapa para HTML. Acepta números además de texto porque las columnas
+ * numéricas de la base llegan como int o float a las plantillas.
+ */
+function h(string|int|float|null $s): string {
     return htmlspecialchars((string) $s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 

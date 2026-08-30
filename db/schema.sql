@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
   cargo           VARCHAR(120) DEFAULT NULL,
   fecha_nacimiento DATE        DEFAULT NULL,
   tema            ENUM('light','dark') NOT NULL DEFAULT 'dark',
+  codigo_externo  VARCHAR(40)  DEFAULT NULL,
+  origen          VARCHAR(20)  NOT NULL DEFAULT 'local',
   ultimo_acceso   DATETIME     DEFAULT NULL,
   intentos        TINYINT UNSIGNED NOT NULL DEFAULT 0,
   bloqueado_hasta DATETIME     DEFAULT NULL,
@@ -46,6 +48,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   actualizado_en  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_usuarios_rol (rol),
   INDEX idx_usuarios_colegio (colegio_id),
+  INDEX idx_usuarios_externo (codigo_externo),
   CONSTRAINT fk_usuarios_colegio FOREIGN KEY (colegio_id) REFERENCES colegios(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -165,6 +168,7 @@ CREATE TABLE IF NOT EXISTS grupos (
   anio        SMALLINT UNSIGNED NOT NULL,
   periodo     VARCHAR(30) DEFAULT NULL,
   codigo      CHAR(8) NOT NULL UNIQUE,
+  curso_externo VARCHAR(60) DEFAULT NULL,
   jornada     VARCHAR(40) DEFAULT NULL,
   modo_examen TINYINT(1) NOT NULL DEFAULT 0,
   ia_permitida TINYINT(1) NOT NULL DEFAULT 1,

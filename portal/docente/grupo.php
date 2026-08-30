@@ -160,7 +160,8 @@ cabecera($g['nombre'], [
     'titulo' => $g['nombre'],
     'sub'    => $g['grado'] . ' · ' . $g['programa_ib'] . ' · ' . $g['asignatura'] . ' · ' . $g['periodo'] . ' de ' . $g['anio'],
     'migas'  => [['Panel', 'portal/docente/index.php'], ['Mis grupos', 'portal/docente/grupos.php'], [$g['nombre']]],
-    'acciones' => '<a class="btn btn-ghost" href="' . url('portal/docente/seguimiento.php?grupo=' . $id) . '">Matriz de avance</a>'
+    'acciones' => '<a class="btn btn-ghost" href="' . url('portal/docente/importar.php') . '">Traer de Phidias</a>'
+                . '<a class="btn btn-ghost" href="' . url('portal/docente/seguimiento.php?grupo=' . $id) . '">Matriz de avance</a>'
                 . '<a class="btn" href="' . url('portal/docente/banco.php?nivel=' . (int) $g['nivel_id'] . '&grupo=' . $id) . '">Asignar actividad</a>',
 ]);
 ?>

@@ -39,6 +39,7 @@ function menu_lateral(string $rol): array {
                 ['index.php',        'Panel',          'grid',    'portal/docente/index.php'],
                 ['grupos.php',       'Mis grupos',     'layers',  'portal/docente/grupos.php'],
                 ['estudiantes.php',  'Estudiantes',    'users',   'portal/docente/estudiantes.php'],
+                ['importar.php',     'Importar de Phidias', 'down', 'portal/docente/importar.php'],
                 ['seguimiento.php',  'Seguimiento',    'chart',   'portal/docente/seguimiento.php'],
             ]],
             ['Trabajo', [
