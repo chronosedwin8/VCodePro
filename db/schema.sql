@@ -341,6 +341,9 @@ CREATE TABLE IF NOT EXISTS facturas (
   monto       DECIMAL(14,2) NOT NULL,
   moneda      CHAR(3) NOT NULL DEFAULT 'COP',
   estado      ENUM('pagada','pendiente','vencida','anulada') NOT NULL DEFAULT 'pendiente',
+  referencia_pago VARCHAR(60) DEFAULT NULL,
+  pasarela    VARCHAR(30) DEFAULT NULL,
+  pagada_en   DATETIME DEFAULT NULL,
   emitida_en  DATE NOT NULL,
   vence_en    DATE NOT NULL,
   CONSTRAINT fk_fac_cli FOREIGN KEY (cliente_id) REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -400,6 +403,24 @@ CREATE TABLE IF NOT EXISTS auditoria (
 CREATE TABLE IF NOT EXISTS ajustes (
   clave  VARCHAR(60) PRIMARY KEY,
   valor  TEXT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pagos_webhook (
+  id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  origen       VARCHAR(30) NOT NULL DEFAULT 'mercadopago',
+  entorno      ENUM('produccion','prueba','desconocido') NOT NULL DEFAULT 'desconocido',
+  tipo         VARCHAR(60)  DEFAULT NULL,
+  accion       VARCHAR(60)  DEFAULT NULL,
+  recurso_id   VARCHAR(60)  DEFAULT NULL,
+  firma        ENUM('valida','invalida','sin_secreto') NOT NULL DEFAULT 'sin_secreto',
+  cuerpo       MEDIUMTEXT,
+  cabeceras    TEXT,
+  ip           VARCHAR(45)  DEFAULT NULL,
+  procesado    TINYINT(1) NOT NULL DEFAULT 0,
+  nota         VARCHAR(300) DEFAULT NULL,
+  creado_en    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_pw_recurso (origen, recurso_id),
+  INDEX idx_pw_fecha (creado_en)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS mensajes_contacto (

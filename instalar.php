@@ -85,6 +85,9 @@ try {
         ['usuarios', 'codigo_externo', "VARCHAR(40) DEFAULT NULL AFTER tema"],
         ['usuarios', 'origen',         "VARCHAR(20) NOT NULL DEFAULT 'local' AFTER codigo_externo"],
         ['grupos',   'curso_externo',  "VARCHAR(60) DEFAULT NULL AFTER codigo"],
+        ['facturas', 'referencia_pago', "VARCHAR(60) DEFAULT NULL AFTER estado"],
+        ['facturas', 'pasarela',        "VARCHAR(30) DEFAULT NULL AFTER referencia_pago"],
+        ['facturas', 'pagada_en',       "DATETIME DEFAULT NULL AFTER pasarela"],
     ];
     $agregadas = 0;
     foreach ($columnas as [$tabla, $columna, $definicion]) {

@@ -8,6 +8,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/academico.php';
 require_once __DIR__ . '/../../includes/phidias.php';
+require_once __DIR__ . '/../../includes/pagos.php';
 
 $u = exigir_rol('admin');
 
@@ -70,6 +71,16 @@ if (es_post()) {
         } else {
             flash_err((string) $datos);
         }
+        redirigir('portal/admin/ajustes.php');
+    }
+
+    if ($accion === 'pagos') {
+        // Cada credencial solo se reemplaza si se escribe una nueva.
+        foreach (['mp_public_key', 'mp_access_token', 'mp_webhook_secret'] as $clave) {
+            if (post($clave) !== '') guardar_ajuste($clave, post($clave));
+        }
+        auditar('pagos_configurados');
+        flash_ok('Credenciales de la pasarela guardadas.');
         redirigir('portal/admin/ajustes.php');
     }
 
@@ -148,6 +159,70 @@ cabecera('Ajustes', [
       <button class="btn btn-ghost btn-block mb-2" name="accion" value="insignias">Revisar insignias de estudiantes</button>
       <button class="btn btn-ghost btn-block" name="accion" value="limpiar_sesiones">Limpiar tokens vencidos</button>
       <p class="txt-sm txt-muted mt-2 mb-0">Estas tareas son seguras: recalculan valores derivados sin modificar el trabajo de los estudiantes.</p>
+    </form>
+
+    <form method="post" class="panel">
+      <?= csrf_campo() ?>
+      <input type="hidden" name="accion" value="pagos">
+      <div class="panel-h">
+        <h3>Pasarela de pagos</h3>
+        <?php if (!mp_configurado()): ?><span class="chip chip-gris">Sin credenciales</span>
+        <?php elseif (mp_entorno() === 'prueba'): ?><span class="chip chip-ambar">Modo prueba</span>
+        <?php else: ?><span class="chip chip-verde">Producción</span><?php endif; ?>
+      </div>
+
+      <p class="campo-label">URL del webhook</p>
+      <p class="txt-sm mb-2">
+        <code class="mono copiar" data-copiar="<?= h(mp_url_webhook()) ?>"
+              style="display:block;padding:.5rem .7rem;border:1px solid var(--border);border-radius:8px;background:var(--bg-alt);word-break:break-all"><?= h(mp_url_webhook()) ?></code>
+        <span class="pista">Pégala en Mercado Pago → Webhooks. Al guardarla, el panel genera la clave secreta que va abajo.</span>
+      </p>
+
+      <div class="campo">
+        <label for="mp_public_key">Public Key</label>
+        <input type="text" id="mp_public_key" name="mp_public_key" autocomplete="off"
+               placeholder="<?= mp_public_key() !== '' ? 'Guardada (' . h(mp_pista(mp_public_key())) . ')' : 'APP_USR-…' ?>">
+      </div>
+      <div class="campo">
+        <label for="mp_access_token">Access Token</label>
+        <input type="password" id="mp_access_token" name="mp_access_token" autocomplete="off"
+               placeholder="<?= mp_access_token() !== '' ? 'Guardado (' . h(mp_pista(mp_access_token())) . ')' : 'APP_USR-… o TEST-…' ?>">
+      </div>
+      <div class="campo">
+        <label for="mp_webhook_secret">Clave secreta del webhook</label>
+        <input type="password" id="mp_webhook_secret" name="mp_webhook_secret" autocomplete="off"
+               placeholder="<?= mp_webhook_secret() !== '' ? 'Guardada (' . h(mp_pista(mp_webhook_secret())) . ')' : 'La genera Mercado Pago al registrar la URL' ?>">
+        <span class="pista">Sin ella, el portal acepta las notificaciones pero no puede comprobar que vengan de Mercado Pago.</span>
+      </div>
+      <button class="btn btn-block" type="submit">Guardar credenciales</button>
+
+      <?php $ultimas = filas('SELECT tipo, accion, recurso_id, firma, entorno, creado_en
+                                FROM pagos_webhook ORDER BY id DESC LIMIT 5'); ?>
+      <p class="campo-label mt-2">Últimas notificaciones recibidas</p>
+      <?php if (!$ultimas): ?>
+        <p class="txt-sm txt-muted mb-0">Ninguna todavía. Usa «Simular notificación» en el panel de Mercado Pago para probar.</p>
+      <?php else: ?>
+        <table class="tabla tabla-mini">
+          <tbody>
+          <?php foreach ($ultimas as $n): ?>
+            <tr>
+              <td><?= h($n['tipo'] ?: '—') ?><br><span class="txt-sm txt-muted"><?= h($n['recurso_id'] ?: '') ?></span></td>
+              <td>
+                <?php if ($n['firma'] === 'valida'): ?><span class="chip chip-verde">firma válida</span>
+                <?php elseif ($n['firma'] === 'invalida'): ?><span class="chip chip-rojo">firma inválida</span>
+                <?php else: ?><span class="chip chip-gris">sin clave</span><?php endif; ?>
+              </td>
+              <td class="txt-sm txt-muted"><?= fecha_rel($n['creado_en']) ?></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      <?php endif; ?>
+
+      <p class="txt-sm txt-muted mt-2 mb-0">
+        El cobro en línea todavía no está implementado: las facturas se marcan como pagadas a mano
+        en <a href="<?= url('portal/admin/facturas.php') ?>">Facturación</a>.
+      </p>
     </form>
 
     <form method="post" class="panel">

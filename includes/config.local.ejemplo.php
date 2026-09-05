@@ -23,3 +23,10 @@ putenv('VCP_ENV=produccion');
 // Ajustes del portal; lo definido aquí tiene prioridad.
 // define('PHIDIAS_URL',   'https://ds-barranquilla.phidias.co/rest');
 // define('PHIDIAS_TOKEN', 'pega-aqui-el-token-jwt');
+
+// --------------------------------------------- Mercado Pago (opcional) -----
+// Igual que Phidias: también se pueden guardar desde Ajustes del portal, pero
+// lo definido aquí tiene prioridad y no viaja en el repositorio.
+// define('MERCADOPAGO_PUBLIC_KEY',     'APP_USR-…');
+// define('MERCADOPAGO_ACCESS_TOKEN',   'APP_USR-…');   // TEST-… en el entorno de pruebas
+// define('MERCADOPAGO_WEBHOOK_SECRET', '…');           // la genera el panel al registrar la URL
