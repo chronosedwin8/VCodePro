@@ -107,7 +107,7 @@ chmod 600 includes/config.local.php
 index index.html index.php;
 
 # Subidas de hasta 12 MB (el límite del portal) con margen
-client_max_body_size 16M;
+client_max_body_size 30M;
 
 # Cada archivo es real: no enrutar los 404 hacia index.php
 location / {
@@ -160,8 +160,8 @@ sudo nginx -t && sudo systemctl reload nginx
 
 | Ajuste | Valor | Por qué |
 |---|---|---|
-| `upload_max_filesize` | `16M` | El portal acepta adjuntos de hasta 12 MB |
-| `post_max_size` | `20M` | Debe superar al anterior |
+| `upload_max_filesize` | `30M` | Los adjuntos de las entregas llegan a 25 MB |
+| `post_max_size` | `30M` | Debe superar al anterior |
 | `memory_limit` | `256M` | El consolidado de Phidias ocupa 12 MB al procesarse; el resto es margen |
 | `max_execution_time` | `120` | Importar un curso completo crea una cuenta por estudiante y cada `password_hash` tarda unas décimas de segundo |
 
@@ -175,10 +175,15 @@ horaria la fija el propio código (`America/Bogota`), no hay que tocarla.
 Desde el directorio raíz del sitio y con el usuario del sitio:
 
 ```bash
-php instalar.php "UnaClaveFuerteParaElAdministrador"
+php instalar.php --sin-demo "UnaClaveFuerteParaElAdministrador"
 ```
 
-Debe terminar con las 30 tablas, los 7 niveles y las 133 actividades. Después:
+`--sin-demo` crea el esquema, los niveles, el banco de actividades, las insignias, los ajustes y
+tu cuenta de administración, **pero ningún dato de ejemplo**. Es lo que quieres en un servidor
+con matrícula real: te ahorra el paso 9 entero. Sin ese modificador se crean además 2 docentes,
+24 estudiantes, un cliente, una licencia y entregas de muestra.
+
+Debe terminar con las 31 tablas, los 7 niveles y las 133 actividades. Después:
 
 ```bash
 rm instalar.php
@@ -211,6 +216,8 @@ fastcgi_param HTTPS on;
 ---
 
 ## 9. Limpiar los datos de demostración
+
+> Si instalaste con `--sin-demo`, **sáltate este paso**: no hay nada que limpiar.
 
 El instalador crea un colegio de ejemplo con 2 docentes, 24 estudiantes, un cliente, una
 licencia, dos facturas y un ticket. **Antes de abrir el portal a personas reales**, haz una copia
@@ -275,6 +282,51 @@ preferencia. Sí debe ser **pública y con HTTPS**, o el retorno automático no 
 
 ---
 
+## 10 ter. Adjuntos en Amazon S3
+
+Los estudiantes adjuntan documentos, hojas de cálculo, cuadernos de Python, comprimidos y PDF
+a sus entregas. Sin configurar nada, esos archivos se guardan en `assets/uploads/entregas`
+dentro del servidor. Con S3 configurado van al bucket, que es lo recomendable: no ocupan disco
+del VPS y sobreviven a una reinstalación.
+
+**El bucket tiene que ser privado.** Es trabajo escolar de menores de edad: el portal entrega
+cada archivo con un enlace firmado que caduca a los cinco minutos, y solo a quien tiene permiso
+—el dueño de la entrega, su docente y la administración—. Si el bucket permite lectura pública,
+ese cuidado no sirve de nada porque basta con conocer la URL.
+
+Comprueba que está cerrado:
+
+```bash
+# Debe responder 403. Si responde 200, el bucket es público.
+curl -s -o /dev/null -w '%{http_code}\n' https://TU-BUCKET.s3.amazonaws.com/
+```
+
+En la consola de AWS: **S3 → tu bucket → Permissions → Block public access → Edit → marcar las
+cuatro casillas**, y borrar cualquier *bucket policy* que conceda `s3:GetObject` a `Principal: *`.
+
+El usuario IAM solo necesita esto sobre el bucket, nada más:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+    "Resource": "arn:aws:s3:::TU-BUCKET/*"
+  }]
+}
+```
+
+Las credenciales van en `includes/config.local.php` (ver el paso 4) o, si prefieres no tocar
+archivos, en **Ajustes → Adjuntos de las entregas**, donde además hay un botón **Probar
+almacenamiento** que sube, lee y borra un objeto de diagnóstico y te dice qué falló si algo
+falla.
+
+Recuerda que el tamaño máximo real es el menor de tres números: `ADJUNTO_MAX_BYTES` (25 MB),
+`upload_max_filesize` de PHP y `client_max_body_size` de Nginx. Los pasos 5 y 6 ya los dejan
+en 30 MB.
+
+---
 ## 11. Verificación final
 
 ```bash
@@ -325,12 +377,18 @@ El código se recupera del repositorio; `includes/config.local.php` hay que guar
 ```bash
 cd /home/vcodepro/htdocs/www.vcodepro.de
 git pull
-php instalar.php            # idempotente: aplica migraciones y actualiza el banco
+php instalar.php --sin-demo   # idempotente: aplica migraciones y actualiza el banco
 rm -f instalar.php
 ```
 
+**Siempre con `--sin-demo`.** Sin él, cada actualización volvería a sembrar los docentes,
+estudiantes y grupos de ejemplo dentro de tu matrícula real.
+
 El instalador no duplica nada y no toca la contraseña de una cuenta que ya existe. Si una
-versión añade columnas nuevas, las aplica en el paso de migraciones.
+versión añade columnas nuevas, las aplica en el paso de migraciones. Las fases de las
+actividades y los criterios de rúbrica se actualizan en su sitio, sin borrarlos: de lo
+contrario las cascadas de la base de datos se llevarían por delante el trabajo escrito de los
+estudiantes y sus calificaciones.
 
 ---
 

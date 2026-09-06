@@ -223,6 +223,7 @@ function pie(array $op = []): void {
 <?php endif; ?>
 <script src="<?= url('assets/js/portal.js') ?>"></script>
 <script src="<?= url('assets/js/editor.js') ?>"></script>
+<script src="<?= url('assets/js/adjuntos.js') ?>"></script>
 </body>
 </html>
 <?php

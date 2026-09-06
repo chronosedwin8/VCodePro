@@ -63,6 +63,19 @@ define('BLOQUEO_MINUTOS', 15);
 define('SUBIDA_MAX_BYTES', 12 * 1024 * 1024);
 define('SUBIDA_EXTENSIONES', ['pdf','zip','py','js','html','css','txt','md','png','jpg','jpeg','gif','json','csv','ipynb','sql','java','cpp','c']);
 
+// ------------------------------------------------------------- adjuntos ---
+// Lo que un estudiante puede adjuntar a una entrega, por familias. Es una
+// lista blanca: nada de .exe, .bat, .js suelto ni nada ejecutable.
+define('ADJUNTO_MAX_BYTES', 25 * 1024 * 1024);
+define('ADJUNTO_FAMILIAS', [
+    'Documentos'       => ['pdf','doc','docx','odt','rtf','txt','md'],
+    'Hojas de cálculo' => ['xls','xlsx','ods','csv','tsv'],
+    'Presentaciones'   => ['ppt','pptx','odp'],
+    'Python y código'  => ['py','ipynb','json','sql','java','c','cpp','h','html','css','xml','yml','yaml'],
+    'Comprimidos'      => ['zip','rar','7z','tar','gz','tgz'],
+    'Imágenes'         => ['png','jpg','jpeg','gif','webp','svg'],
+]);
+
 // --------------------------------------------------------------- pedagogía --
 define('FASES_CICLO', [
     'indagar'     => 'Indagar y analizar',

@@ -244,6 +244,28 @@ CREATE TABLE IF NOT EXISTS entrega_fases (
   CONSTRAINT fk_ef_fase FOREIGN KEY (fase_id) REFERENCES actividad_fases(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Adjuntos de una entrega: documentos, hojas de cálculo, código, comprimidos
+-- y PDF. El archivo vive en S3 (bucket privado); aquí solo queda su ficha.
+CREATE TABLE IF NOT EXISTS entrega_adjuntos (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  entrega_id  INT UNSIGNED NOT NULL,
+  fase_id     INT UNSIGNED DEFAULT NULL,
+  subido_por  INT UNSIGNED NOT NULL,
+  nombre      VARCHAR(200) NOT NULL,
+  clave       VARCHAR(300) NOT NULL,
+  almacen     ENUM('s3','local') NOT NULL DEFAULT 's3',
+  tipo        VARCHAR(120) NOT NULL DEFAULT 'application/octet-stream',
+  extension   VARCHAR(10) NOT NULL,
+  bytes       INT UNSIGNED NOT NULL DEFAULT 0,
+  creado_en   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_adj_ent (entrega_id),
+  CONSTRAINT fk_adj_ent  FOREIGN KEY (entrega_id) REFERENCES entregas(id) ON DELETE CASCADE,
+  -- SET NULL y no CASCADE: si el banco cambia las fases de una actividad, el
+  -- adjunto del estudiante debe sobrevivir aunque pierda su fase.
+  CONSTRAINT fk_adj_fase FOREIGN KEY (fase_id) REFERENCES actividad_fases(id) ON DELETE SET NULL,
+  CONSTRAINT fk_adj_usr  FOREIGN KEY (subido_por) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS calificaciones (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   entrega_id  INT UNSIGNED NOT NULL,

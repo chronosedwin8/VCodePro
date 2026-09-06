@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/academico.php';
 require_once __DIR__ . '/../../includes/phidias.php';
 require_once __DIR__ . '/../../includes/pagos_api.php';
+require_once __DIR__ . '/../../includes/adjuntos.php';
 
 $u = exigir_rol('admin');
 
@@ -60,6 +61,25 @@ if (es_post()) {
         if (post('phidias_token') !== '') guardar_ajuste('phidias_token', post('phidias_token'));
         auditar('phidias_configurada');
         flash_ok('Conexión con Phidias guardada.');
+        redirigir('portal/admin/ajustes.php');
+    }
+
+    if ($accion === 'almacenamiento') {
+        foreach (['s3_bucket', 's3_region', 's3_prefijo'] as $clave) {
+            guardar_ajuste($clave, post($clave));
+        }
+        // Las llaves solo se reemplazan si se escriben nuevas.
+        foreach (['s3_llave', 's3_secreto'] as $clave) {
+            if (post($clave) !== '') guardar_ajuste($clave, post($clave));
+        }
+        auditar('almacenamiento_configurado');
+        flash_ok('Almacenamiento de adjuntos guardado.');
+        redirigir('portal/admin/ajustes.php');
+    }
+
+    if ($accion === 'almacenamiento_probar') {
+        [$ok, $msg] = s3_probar();
+        $ok ? flash_ok($msg) : flash_err($msg);
         redirigir('portal/admin/ajustes.php');
     }
 
@@ -266,6 +286,52 @@ cabecera('Ajustes', [
       <p class="txt-sm txt-muted mt-2 mb-0">
         La importación de cursos y estudiantes se hace desde
         <a href="<?= url('portal/docente/importar.php') ?>">Importar de Phidias</a>.
+      </p>
+    </form>
+
+    <form method="post" class="panel">
+      <?= csrf_campo() ?>
+      <input type="hidden" name="accion" value="almacenamiento">
+      <div class="panel-h">
+        <h3>Adjuntos de las entregas</h3>
+        <?= s3_configurado() ? '<span class="chip chip-verde">En S3</span>'
+                             : '<span class="chip chip-ambar">En el disco del servidor</span>' ?>
+      </div>
+      <div class="campo-fila">
+        <div class="campo">
+          <label for="s3_bucket">Bucket</label>
+          <input type="text" id="s3_bucket" name="s3_bucket" value="<?= h(s3_bucket()) ?>" placeholder="mi-bucket">
+        </div>
+        <div class="campo">
+          <label for="s3_region">Región</label>
+          <input type="text" id="s3_region" name="s3_region" value="<?= h(s3_region()) ?>" placeholder="us-east-1">
+        </div>
+      </div>
+      <div class="campo">
+        <label for="s3_prefijo">Carpeta dentro del bucket</label>
+        <input type="text" id="s3_prefijo" name="s3_prefijo" value="<?= h(s3_prefijo()) ?>" placeholder="vcodepro">
+      </div>
+      <div class="campo-fila">
+        <div class="campo">
+          <label for="s3_llave">Access key</label>
+          <input type="password" id="s3_llave" name="s3_llave" autocomplete="off"
+                 placeholder="<?= s3_llave() !== '' ? 'Guardada (' . h(s3_pista(s3_llave())) . ')' : 'AKIA…' ?>">
+        </div>
+        <div class="campo">
+          <label for="s3_secreto">Secret access key</label>
+          <input type="password" id="s3_secreto" name="s3_secreto" autocomplete="off"
+                 placeholder="<?= s3_secreto() !== '' ? 'Guardada (' . h(s3_pista(s3_secreto())) . ')' : 'Pega aquí la clave' ?>">
+        </div>
+      </div>
+      <div class="btn-fila">
+        <button class="btn" type="submit">Guardar</button>
+        <button class="btn btn-ghost" name="accion" value="almacenamiento_probar">Probar almacenamiento</button>
+      </div>
+      <p class="txt-sm txt-muted mt-2 mb-0">
+        El bucket debe ser <strong>privado</strong>: el portal sirve cada archivo con un enlace
+        firmado que caduca en minutos. Sin credenciales, los adjuntos se guardan en el disco del
+        servidor. Máximo <?= h(adjunto_peso(ADJUNTO_MAX_BYTES)) ?> por archivo; el servidor admite
+        hasta <?= h(ini_get('upload_max_filesize')) ?>.
       </p>
     </form>
 

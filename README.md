@@ -29,6 +29,16 @@ indica ninguna, el instalador **genera una al azar y la muestra al terminar**.
 El instalador crea la base de datos, aplica el esquema, carga los siete niveles con sus **133 actividades**, las insignias, el administrador inicial y un colegio de demostración. Es
 idempotente: puede ejecutarse varias veces sin duplicar datos.
 
+En un servidor con matrícula real, ejecútalo siempre con **`--sin-demo`**:
+
+```
+php instalar.php --sin-demo "TuClaveDeAdministrador"
+```
+
+Así crea el esquema, el currículo y tu cuenta, pero ningún docente, estudiante, grupo ni
+entrega de ejemplo. Sin ese modificador, cada actualización volvería a sembrarlos dentro de
+los datos reales.
+
 ### Cuentas creadas por el instalador
 
 | Rol | Correo | Contraseña |
@@ -85,6 +95,7 @@ copia y se rellena en cada equipo.
 | `assets/uploads/entregas/*` | Trabajo entregado por los estudiantes |
 | `assets/uploads/avatares/*` | Imágenes de perfil |
 | `assets/uploads/cache/*` | Caché de la matrícula descargada de Phidias |
+| `db/*.sql` salvo `db/schema.sql` | Copias de la base con nombres de estudiantes y hashes de contraseñas |
 
 De esas carpetas solo se versiona un `.gitkeep`, para conservar la estructura sin subir
 datos personales.
@@ -233,6 +244,8 @@ vcodeproplus/
 │   ├── academico.php              Entregas, progreso, rúbrica e insignias
 │   ├── phidias.php                Cliente de la API de matrícula del colegio
 │   ├── richtext.php               Lista blanca del HTML que escriben los usuarios
+│   ├── s3.php                     Cliente de Amazon S3 (firma SigV4, sin SDK)
+│   ├── adjuntos.php               Archivos que acompañan a una entrega
 │   └── layout.php                 Cabecera, menú por rol y pie del portal
 ├── portal/
 │   ├── login.php · registro.php · recuperar.php · logout.php
@@ -243,13 +256,14 @@ vcodeproplus/
 │   ├── cliente/                   Licencias, puestos, facturas, soporte, descargas
 │   └── api/                       Guardado por fases, tema y formulario de contacto
 ├── db/
-│   ├── schema.sql                 28 tablas InnoDB utf8mb4
+│   ├── schema.sql                 31 tablas InnoDB utf8mb4
 │   └── seed/                      Niveles, rúbricas base y los cuatro bancos de actividades
 └── assets/
     ├── css/styles.css             Sistema de diseño del sitio
     ├── css/portal.css             Capa del portal sobre los mismos tokens
     ├── js/portal.js               Tema, menú, autoguardado, filtros
     ├── js/editor.js               Editor enriquecido sobre los textarea del portal
+    ├── js/adjuntos.js             Subida de archivos sin recargar la página
     └── uploads/                   Entregas y avatares (fuera del control de versiones)
 ```
 
@@ -324,6 +338,18 @@ de código y enlaces.
   que trae una etiqueta de la lista blanca, de modo que un `if (a < b)` escrito antes no se
   confunde con marcas.
 
+### Archivos adjuntos
+
+Cada entrega admite archivos, tanto en el bloque de respuesta como en cada fase del ciclo de
+diseño: documentos (PDF, Word, ODT, RTF), hojas de cálculo (Excel, ODS, CSV), presentaciones,
+código y cuadernos de Python, comprimidos (ZIP, RAR, 7z, TAR) e imágenes. La lista está en
+`ADJUNTO_FAMILIAS` (`includes/config.php`) y es una lista blanca: nada ejecutable entra.
+El máximo es 25 MB por archivo.
+
+Los archivos se guardan en **Amazon S3** si está configurado y, si no, en el disco del
+servidor; el portal funciona igual en los dos casos. Ver `includes/s3.php`, que firma las
+peticiones con SigV4 a mano —el proyecto no usa Composer— y `includes/adjuntos.php`.
+
 ### Probidad académica e IA
 
 - Cada entrega incluye una **declaración de uso de IA** que el docente ve al calificar.
@@ -355,6 +381,11 @@ de código y enlaces.
   `svg` y compañía se eliminan enteras. Sin esto, un estudiante podría guardar un script
   que se ejecutaría en la sesión del docente que califica.
 - Subidas restringidas por extensión y tamaño, con nombre aleatorio y ejecución deshabilitada.
+- Los adjuntos viven en un bucket de S3 **privado**. El portal nunca publica su dirección:
+  comprueba primero quién pide qué —solo el dueño de la entrega, su docente y la
+  administración— y luego redirige a un enlace firmado que caduca en cinco minutos. Lo que
+  un navegador podría ejecutar (HTML, SVG) se guarda como binario y todo se descarga con
+  `Content-Disposition: attachment`.
 - `includes/` y `db/` bloqueados por `.htaccess`; auditoría de todas las acciones sensibles.
 - Ninguna credencial en el repositorio: ver «Credenciales y archivos que no se versionan».
 

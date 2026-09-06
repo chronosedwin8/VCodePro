@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/academico.php';
+require_once __DIR__ . '/../../includes/adjuntos.php';
 
 $u = exigir_rol('docente', 'admin');
 $id = get_int('e');
@@ -105,12 +106,13 @@ if (es_post()) {
 
 // ---------------------------------------------------------------- datos ---
 $fases = [];
-foreach (filas('SELECT ef.*, af.titulo, af.fase, af.entregable, af.orden
+foreach (filas('SELECT ef.*, af.id AS af_id, af.titulo, af.fase, af.entregable, af.orden
                   FROM actividad_fases af
              LEFT JOIN entrega_fases ef ON ef.fase_id = af.id AND ef.entrega_id = ?
                  WHERE af.actividad_id = ? ORDER BY af.orden', [$id, $e['actividad_id']]) as $f) {
     $fases[] = $f;
 }
+$adjuntos = adjuntos_por_fase($id);
 $califs = [];
 foreach (filas('SELECT * FROM calificaciones WHERE entrega_id = ?', [$id]) as $c) $califs[(int) $c['criterio_id']] = $c;
 
@@ -156,6 +158,9 @@ cabecera('Calificar', [
         <dt>Uso de IA declarado</dt>
         <dd><?= $e['uso_ia'] ? bloque_rico($e['uso_ia']) : '<span class="txt-muted">Sin declaración</span>' ?></dd>
       </dl>
+
+      <p class="campo-label mt-2">Archivos de la entrega</p>
+      <?= bloque_adjuntos($id, null, $adjuntos[0] ?? [], true, $u, false) ?>
     </div>
 
     <!-- ============================ CICLO DE DISEÑO ========================= -->
@@ -175,7 +180,11 @@ cabecera('Calificar', [
                 <?= bloque_rico($f['contenido'], 'prosa') ?>
                 <p class="txt-sm txt-muted mb-0">Última edición: <?= fecha($f['actualizado_en'], true) ?></p>
               <?php else: ?>
-                <p class="txt-muted mb-0">Sin registro en esta fase.</p>
+                <p class="txt-muted">Sin registro en esta fase.</p>
+              <?php endif; ?>
+              <?php if (!empty($adjuntos[(int) $f['af_id']])): ?>
+                <?= bloque_adjuntos($id, (int) $f['af_id'], $adjuntos[(int) $f['af_id']], false, $u, true,
+                                    'Archivos de esta fase') ?>
               <?php endif; ?>
             </div>
           </details>

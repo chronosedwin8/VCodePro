@@ -30,3 +30,19 @@ putenv('VCP_ENV=produccion');
 // define('MERCADOPAGO_PUBLIC_KEY',     'APP_USR-…');
 // define('MERCADOPAGO_ACCESS_TOKEN',   'APP_USR-…');   // TEST-… en el entorno de pruebas
 // define('MERCADOPAGO_WEBHOOK_SECRET', '…');           // la genera el panel al registrar la URL
+
+// ------------------------------- Adjuntos en Amazon S3 (opcional) ----------
+// Archivos que los estudiantes adjuntan a sus entregas. Si no se configura,
+// se guardan en el disco del servidor (assets/uploads/entregas).
+//
+// El bucket debe ser PRIVADO: el portal entrega cada archivo con un enlace
+// firmado que caduca en minutos. Si el bucket permite lectura pública, el
+// trabajo de los estudiantes queda accesible para cualquiera que sepa la URL.
+//
+// El usuario IAM solo necesita s3:PutObject, s3:GetObject y s3:DeleteObject
+// sobre arn:aws:s3:::TU-BUCKET/*
+// define('S3_BUCKET',  'tu-bucket');
+// define('S3_REGION',  'us-east-1');
+// define('S3_LLAVE',   'AKIA…');
+// define('S3_SECRETO', '…');
+// define('S3_PREFIJO', 'vcodepro');   // carpeta dentro del bucket

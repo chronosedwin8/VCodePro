@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/academico.php';
+require_once __DIR__ . '/../../includes/adjuntos.php';
 
 $u = exigir_rol('estudiante');
 $entregaId = get_int('e');
@@ -25,6 +26,7 @@ $e = fila('SELECT e.*, a.id AS asignacion_id, a.fecha_inicio, a.fecha_entrega, a
 if (!$e) { flash_err('No encontramos esa actividad entre las tuyas.'); redirigir('portal/estudiante/actividades.php'); }
 
 $act = actividad_completa((int) $e['actividad_id']);
+$adjuntos = adjuntos_por_fase($entregaId);
 $bloqueada = $e['estado'] === 'revisada' || $e['estado_asignacion'] === 'cerrada';
 
 // ------------------------------------------------------------- acciones --
@@ -200,6 +202,9 @@ cabecera($act['titulo'], [
                 <span class="pista" data-estado-fase="<?= (int) $f['id'] ?>"></span>
               </div>
 
+              <?= bloque_adjuntos($entregaId, (int) $f['id'], $adjuntos[(int) $f['id']] ?? [],
+                                  !$bloqueada, $u, $bloqueada, 'Archivos de esta fase') ?>
+
               <?php if (!$bloqueada): ?>
                 <label class="check">
                   <input type="checkbox"
@@ -240,21 +245,23 @@ cabecera($act['titulo'], [
             <label for="url_repo">Enlace al repositorio o al producto</label>
             <input type="url" id="url_repo" name="url_repo" value="<?= h($e['url_repo']) ?>" <?= $bloqueada ? 'disabled' : '' ?> placeholder="https://">
           </div>
+          <?php if ($e['archivo']): ?>
           <div class="campo">
-            <label for="archivo">Archivo adjunto</label>
-            <input type="file" id="archivo" name="archivo" <?= $bloqueada ? 'disabled' : '' ?>>
-            <?php if ($e['archivo']): ?>
-              <span class="pista">Adjunto actual: <a href="<?= URL_SUBIDAS . '/' . h($e['archivo']) ?>" target="_blank" rel="noopener"><?= h($e['archivo_nombre']) ?></a></span>
-            <?php else: ?>
-              <span class="pista">Máximo 12 MB. Formatos permitidos: código, PDF, ZIP e imágenes.</span>
-            <?php endif; ?>
+            <span class="campo-label">Adjunto anterior</span>
+            <span class="pista"><a href="<?= URL_SUBIDAS . '/' . h($e['archivo']) ?>" target="_blank" rel="noopener"><?= h($e['archivo_nombre']) ?></a></span>
           </div>
+          <?php endif; ?>
         </div>
         <div class="campo">
           <label for="uso_ia">Declaración de uso de inteligencia artificial</label>
           <textarea id="uso_ia" name="uso_ia" data-rico style="min-height:90px" <?= $bloqueada ? 'disabled' : '' ?>
                     placeholder="Indica qué herramienta usaste, para qué y qué parte del trabajo es tuya. Si no usaste IA, escríbelo."><?= h($e['uso_ia']) ?></textarea>
           <span class="pista">La probidad académica exige declarar el uso de estas herramientas, no evitarlas.</span>
+        </div>
+
+        <div class="campo">
+          <span class="campo-label">Archivos de la entrega</span>
+          <?= bloque_adjuntos($entregaId, null, $adjuntos[0] ?? [], !$bloqueada, $u, $bloqueada) ?>
         </div>
         <?php if (!$bloqueada): ?>
           <div class="form-acc">
