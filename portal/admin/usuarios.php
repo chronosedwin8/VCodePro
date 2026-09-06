@@ -125,7 +125,8 @@ cabecera('Usuarios', [
     'titulo' => 'Usuarios',
     'sub'    => count($usuarios) . ' cuenta(s) con el filtro actual.',
     'migas'  => [['Panel', 'portal/admin/index.php'], ['Usuarios']],
-    'acciones' => '<a class="btn btn-ghost" href="' . url('portal/admin/usuarios.php?exportar=csv') . '">Exportar CSV</a>',
+    'acciones' => '<a class="btn" href="' . url('portal/admin/usuarios.php?nuevo=1#nuevo') . '">Nuevo usuario</a>'
+                . ' <a class="btn btn-ghost" href="' . url('portal/admin/usuarios.php?exportar=csv') . '">Exportar CSV</a>',
 ]);
 ?>
 <form class="acciones-barra" method="get">
@@ -144,96 +145,45 @@ cabecera('Usuarios', [
   <a class="btn btn-ghost btn-sm" href="<?= url('portal/admin/usuarios.php') ?>">Limpiar</a>
 </form>
 
-<div class="rejilla rej-lat">
-  <div class="panel panel-plano">
-    <div class="tabla-caja">
-      <table class="tabla">
-        <thead><tr><th>Usuario</th><th>Rol</th><th>Colegio</th><th>Estado</th><th>Último acceso</th><th class="acc">Acciones</th></tr></thead>
-        <tbody>
-        <?php foreach ($usuarios as $x): ?>
-          <tr>
-            <td>
-              <strong><?= h(trim($x['apellidos'] . ', ' . $x['nombre'])) ?></strong><br>
-              <span class="txt-sm txt-muted"><?= h($x['email']) ?></span>
-              <?php if ($x['rol'] === 'estudiante' && (int) $x['grupos_est']): ?>
-                <span class="chip chip-gris"><?= (int) $x['grupos_est'] ?> grupo(s)</span>
-              <?php elseif ($x['rol'] === 'docente' && (int) $x['grupos_doc']): ?>
-                <span class="chip chip-gris"><?= (int) $x['grupos_doc'] ?> grupo(s)</span>
-              <?php endif; ?>
-              <?php if ($x['rol'] === 'docente' && !empty($x['ia_habilitada'])): ?>
-                <span class="chip chip-azul">IA</span>
-              <?php endif; ?>
-            </td>
-            <td><?= h(ROLES[$x['rol']]) ?></td>
-            <td class="txt-sm txt-muted"><?= h($x['colegio'] ?? '—') ?></td>
-            <td><?= etiqueta_estado($x['estado']) ?></td>
-            <td class="txt-sm txt-muted"><?= $x['ultimo_acceso'] ? fecha_rel($x['ultimo_acceso']) : 'nunca' ?></td>
-            <td class="acc">
-              <form method="post" class="btn-fila">
-                <?= csrf_campo() ?>
-                <input type="hidden" name="id" value="<?= (int) $x['id'] ?>">
-                <a class="btn btn-xs btn-ghost" href="<?= url('portal/admin/usuarios.php?editar=' . (int) $x['id']) ?>">Editar</a>
-                <?php if ($x['estado'] === 'pendiente'): ?>
-                  <button class="btn btn-xs btn-ok" name="accion" value="estado" onclick="this.form.valor.value='activo'">Aprobar</button>
-                <?php elseif ($x['estado'] === 'activo'): ?>
-                  <button class="btn btn-xs btn-ghost" name="accion" value="estado" onclick="this.form.valor.value='suspendido'"
-                          data-confirmar="¿Suspender esta cuenta?">Suspender</button>
-                <?php else: ?>
-                  <button class="btn btn-xs btn-ghost" name="accion" value="estado" onclick="this.form.valor.value='activo'">Reactivar</button>
-                <?php endif; ?>
-                <?php if ($x['rol'] === 'docente'): ?>
-                  <button class="btn btn-xs <?= empty($x['ia_habilitada']) ? 'btn-ghost' : 'btn-ok' ?>" name="accion" value="ia"
-                          data-confirmar="<?= empty($x['ia_habilitada']) ? 'Este docente podrá calificar con IA y redactar actividades con ella. ¿Habilitar?' : '¿Retirar el asistente de IA a este docente?' ?>">
-                    <?= empty($x['ia_habilitada']) ? 'Dar IA' : 'Quitar IA' ?>
-                  </button>
-                <?php endif; ?>
-                <button class="btn btn-xs btn-ghost" name="accion" value="clave" data-confirmar="¿Generar una contraseña temporal?">Clave</button>
-                <button class="btn btn-xs btn-err" name="accion" value="eliminar"
-                        data-confirmar="Se eliminará la cuenta y todo su trabajo. Esta acción no se puede deshacer. ¿Continuar?">Eliminar</button>
-                <input type="hidden" name="valor" value="activo">
-              </form>
-            </td>
-          </tr>
-        <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
-  </div>
+<?php
+/* Con un solo colegio, repetir su nombre en las 21 filas solo estorba: la
+   columna aparece cuando de verdad hay algo que distinguir. */
+$variosColegios = count(array_unique(array_map(fn($x) => (string) ($x['colegio'] ?? ''), $usuarios))) > 1;
+$abierto = $edit || get('nuevo');
+?>
 
-  <aside>
-    <form method="post" class="panel">
-      <?= csrf_campo() ?>
-      <input type="hidden" name="accion" value="<?= $edit ? 'editar' : 'crear' ?>">
-      <?php if ($edit): ?><input type="hidden" name="id" value="<?= (int) $edit['id'] ?>"><?php endif; ?>
-      <div class="panel-h">
-        <h3><?= $edit ? 'Editar usuario' : 'Nuevo usuario' ?></h3>
-        <?php if ($edit): ?><a class="txt-sm" href="<?= url('portal/admin/usuarios.php') ?>">Cancelar</a><?php endif; ?>
-      </div>
-      <div class="campo-fila">
-        <div class="campo"><label for="nombre">Nombres</label><input type="text" id="nombre" name="nombre" value="<?= h($edit['nombre'] ?? '') ?>" required></div>
-        <div class="campo"><label for="apellidos">Apellidos</label><input type="text" id="apellidos" name="apellidos" value="<?= h($edit['apellidos'] ?? '') ?>"></div>
+<details class="panel plegable" <?= $abierto ? 'open' : '' ?>>
+  <summary>
+    <span><?= $edit ? 'Editar a ' . h(trim($edit['nombre'] . ' ' . $edit['apellidos'])) : 'Crear un usuario nuevo' ?></span>
+  </summary>
+
+  <form method="post" class="plegable-cuerpo">
+    <?= csrf_campo() ?>
+    <input type="hidden" name="accion" value="<?= $edit ? 'editar' : 'crear' ?>">
+    <?php if ($edit): ?><input type="hidden" name="id" value="<?= (int) $edit['id'] ?>"><?php endif; ?>
+
+    <div class="campo-fila-3">
+      <div class="campo"><label for="nombre">Nombres</label><input type="text" id="nombre" name="nombre" value="<?= h($edit['nombre'] ?? '') ?>" required></div>
+      <div class="campo"><label for="apellidos">Apellidos</label><input type="text" id="apellidos" name="apellidos" value="<?= h($edit['apellidos'] ?? '') ?>"></div>
+      <div class="campo"><label for="email">Correo</label><input type="email" id="email" name="email" value="<?= h($edit['email'] ?? '') ?>" required></div>
+    </div>
+
+    <div class="campo-fila-3">
+      <div class="campo">
+        <label for="rol">Rol</label>
+        <select id="rol" name="rol">
+          <?php foreach (ROLES as $k => $v): ?>
+            <option value="<?= $k ?>" <?= ($edit['rol'] ?? '') === $k ? 'selected' : '' ?>><?= $v ?></option>
+          <?php endforeach; ?>
+        </select>
       </div>
       <div class="campo">
-        <label for="email">Correo</label>
-        <input type="email" id="email" name="email" value="<?= h($edit['email'] ?? '') ?>" required>
-      </div>
-      <div class="campo-fila">
-        <div class="campo">
-          <label for="rol">Rol</label>
-          <select id="rol" name="rol">
-            <?php foreach (ROLES as $k => $v): ?>
-              <option value="<?= $k ?>" <?= ($edit['rol'] ?? '') === $k ? 'selected' : '' ?>><?= $v ?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="campo">
-          <label for="estado">Estado</label>
-          <select id="estado" name="estado">
-            <?php foreach (['activo' => 'Activo', 'pendiente' => 'Pendiente', 'suspendido' => 'Suspendido'] as $k => $v): ?>
-              <option value="<?= $k ?>" <?= ($edit['estado'] ?? 'activo') === $k ? 'selected' : '' ?>><?= $v ?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
+        <label for="estado">Estado</label>
+        <select id="estado" name="estado">
+          <?php foreach (['activo' => 'Activo', 'pendiente' => 'Pendiente', 'suspendido' => 'Suspendido'] as $k => $v): ?>
+            <option value="<?= $k ?>" <?= ($edit['estado'] ?? 'activo') === $k ? 'selected' : '' ?>><?= $v ?></option>
+          <?php endforeach; ?>
+        </select>
       </div>
       <div class="campo">
         <label for="colegio_id">Colegio</label>
@@ -244,22 +194,96 @@ cabecera('Usuarios', [
           <?php endforeach; ?>
         </select>
       </div>
-      <div class="campo-fila">
-        <div class="campo"><label for="documento">Documento</label><input type="text" id="documento" name="documento" value="<?= h($edit['documento'] ?? '') ?>"></div>
-        <div class="campo"><label for="telefono">Teléfono</label><input type="tel" id="telefono" name="telefono" value="<?= h($edit['telefono'] ?? '') ?>"></div>
-      </div>
+    </div>
+
+    <div class="campo-fila-3">
+      <div class="campo"><label for="documento">Documento</label><input type="text" id="documento" name="documento" value="<?= h($edit['documento'] ?? '') ?>"></div>
+      <div class="campo"><label for="telefono">Teléfono</label><input type="tel" id="telefono" name="telefono" value="<?= h($edit['telefono'] ?? '') ?>"></div>
+      <div class="campo"><label for="cargo">Cargo</label><input type="text" id="cargo" name="cargo" value="<?= h($edit['cargo'] ?? '') ?>"></div>
+    </div>
+
+    <?php if (!$edit): ?>
       <div class="campo">
-        <label for="cargo">Cargo</label>
-        <input type="text" id="cargo" name="cargo" value="<?= h($edit['cargo'] ?? '') ?>">
+        <label for="clave">Contraseña inicial</label>
+        <input type="text" id="clave" name="clave" placeholder="Se genera una si la dejas vacía">
       </div>
-      <?php if (!$edit): ?>
-        <div class="campo">
-          <label for="clave">Contraseña inicial</label>
-          <input type="text" id="clave" name="clave" placeholder="Se genera si la dejas vacía">
-        </div>
-      <?php endif; ?>
-      <button class="btn btn-block" type="submit"><?= $edit ? 'Guardar cambios' : 'Crear usuario' ?></button>
-    </form>
-  </aside>
+    <?php endif; ?>
+
+    <div class="form-acc">
+      <button class="btn" type="submit"><?= $edit ? 'Guardar cambios' : 'Crear usuario' ?></button>
+      <?php if ($edit): ?><a class="btn btn-ghost" href="<?= url('portal/admin/usuarios.php') ?>">Cancelar</a><?php endif; ?>
+    </div>
+  </form>
+</details>
+
+<div class="panel panel-plano">
+  <div class="tabla-caja">
+    <table class="tabla tabla-usuarios">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Rol</th>
+          <?php if ($variosColegios): ?><th>Colegio</th><?php endif; ?>
+          <th>Estado</th>
+          <th>Último acceso</th>
+          <th class="acc">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+      <?php foreach ($usuarios as $x): ?>
+        <tr<?= $edit && (int) $edit['id'] === (int) $x['id'] ? ' class="es-editando"' : '' ?>>
+          <td>
+            <strong><?= h(trim($x['apellidos'] . ', ' . $x['nombre'])) ?></strong>
+            <?php if ($x['rol'] === 'estudiante' && (int) $x['grupos_est']): ?>
+              <span class="chip chip-gris"><?= (int) $x['grupos_est'] ?> grupo(s)</span>
+            <?php elseif ($x['rol'] === 'docente' && (int) $x['grupos_doc']): ?>
+              <span class="chip chip-gris"><?= (int) $x['grupos_doc'] ?> grupo(s)</span>
+            <?php endif; ?>
+            <?php if ($x['rol'] === 'docente' && !empty($x['ia_habilitada'])): ?>
+              <span class="chip chip-azul" title="Puede calificar y redactar con el asistente de IA">IA</span>
+            <?php endif; ?>
+            <br><span class="txt-sm txt-muted"><?= h($x['email']) ?></span>
+          </td>
+          <td class="col-rol"><?= h(ROLES[$x['rol']]) ?></td>
+          <?php if ($variosColegios): ?>
+            <td class="txt-sm txt-muted col-colegio" title="<?= h($x['colegio'] ?? '') ?>"><?= h($x['colegio'] ?? '—') ?></td>
+          <?php endif; ?>
+          <td><?= etiqueta_estado($x['estado']) ?></td>
+          <td class="txt-sm txt-muted col-acceso"><?= $x['ultimo_acceso'] ? fecha_rel($x['ultimo_acceso']) : 'nunca' ?></td>
+          <td class="acc">
+            <form method="post" class="btn-fila">
+              <?= csrf_campo() ?>
+              <input type="hidden" name="id" value="<?= (int) $x['id'] ?>">
+              <a class="btn btn-xs btn-ghost" href="<?= url('portal/admin/usuarios.php?editar=' . (int) $x['id']) ?>">Editar</a>
+              <?php if ($x['estado'] === 'pendiente'): ?>
+                <button class="btn btn-xs btn-ok" name="accion" value="estado" onclick="this.form.valor.value='activo'">Aprobar</button>
+              <?php elseif ($x['estado'] === 'activo'): ?>
+                <button class="btn btn-xs btn-ghost" name="accion" value="estado" onclick="this.form.valor.value='suspendido'"
+                        data-confirmar="¿Suspender esta cuenta?">Suspender</button>
+              <?php else: ?>
+                <button class="btn btn-xs btn-ghost" name="accion" value="estado" onclick="this.form.valor.value='activo'">Reactivar</button>
+              <?php endif; ?>
+              <?php if ($x['rol'] === 'docente'): ?>
+                <button class="btn btn-xs <?= empty($x['ia_habilitada']) ? 'btn-ghost' : 'btn-ok' ?>" name="accion" value="ia"
+                        data-confirmar="<?= empty($x['ia_habilitada']) ? 'Este docente podrá calificar con IA y redactar actividades con ella. ¿Habilitar?' : '¿Retirar el asistente de IA a este docente?' ?>">
+                  <?= empty($x['ia_habilitada']) ? 'Dar IA' : 'Quitar IA' ?>
+                </button>
+              <?php endif; ?>
+              <button class="btn btn-xs btn-ghost" name="accion" value="clave" data-confirmar="¿Generar una contraseña temporal?">Clave</button>
+              <button class="btn btn-xs btn-err" name="accion" value="eliminar"
+                      data-confirmar="Se eliminará la cuenta y todo su trabajo. Esta acción no se puede deshacer. ¿Continuar?">Eliminar</button>
+              <input type="hidden" name="valor" value="activo">
+            </form>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+  <?php if (!$variosColegios && $usuarios): ?>
+    <p class="txt-sm txt-muted tabla-pie">
+      Todas estas cuentas pertenecen a <?= h($usuarios[0]['colegio'] ?? 'ningún colegio') ?>.
+    </p>
+  <?php endif; ?>
 </div>
 <?php pie(); ?>

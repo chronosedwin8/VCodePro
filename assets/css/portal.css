@@ -246,6 +246,10 @@ table.tabla tbody tr:hover { background: var(--bg-alt); }
 table.tabla tbody tr:last-child td { border-bottom: 0; }
 table.tabla .num { text-align: right; font-variant-numeric: tabular-nums; }
 table.tabla .acc { text-align: right; white-space: nowrap; }
+/* Una celda con varios botones se envuelve antes que salirse del panel: con
+   nowrap, el último botón quedaba fuera del área visible y no se podía pulsar. */
+table.tabla td.acc:has(.btn-fila) { white-space: normal; }
+table.tabla td.acc .btn-fila { flex-wrap: wrap; justify-content: flex-end; }
 .tabla-mini td, .tabla-mini th { padding: .5rem .6rem; font-size: .86rem; }
 
 /* ---------- Barras de progreso ---------- */
@@ -598,3 +602,38 @@ tr.es-fallo      { background: var(--err-soft); cursor: help; }
   background: var(--bg-alt); border: 1px dashed var(--border); border-radius: var(--radius);
 }
 .ia-caja > h4 { margin: 0 0 .4rem; font-size: .86rem; color: var(--text-strong); }
+
+/* ---------- Panel plegable (formularios que no deben robar sitio) ---------- */
+/* Un formulario de alta que vive siempre abierto en un lateral le quita a la
+   tabla el ancho que necesita. Aquí se pliega y solo se abre al usarlo. */
+details.plegable { padding: 0; }
+details.plegable > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: .85rem 1.1rem; cursor: pointer; list-style: none;
+  font-weight: 600; color: var(--text-strong);
+  border-radius: var(--radius-lg);
+}
+details.plegable > summary::-webkit-details-marker { display: none; }
+details.plegable > summary::after {
+  content: "+"; flex: none; width: 22px; height: 22px; line-height: 20px; text-align: center;
+  font-weight: 700; color: var(--muted); border: 1px solid var(--border); border-radius: 6px;
+}
+details.plegable[open] > summary::after { content: "−"; }
+details.plegable > summary:hover { background: var(--bg-alt); }
+details.plegable[open] > summary { border-bottom: 1px solid var(--border); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.plegable-cuerpo { padding: 1.1rem; }
+
+/* ---------- Tabla de usuarios ---------- */
+.tabla-usuarios td { padding-top: .55rem; padding-bottom: .55rem; }
+.tabla-usuarios .col-rol,
+.tabla-usuarios .col-acceso { white-space: nowrap; }
+.tabla-usuarios .col-colegio {
+  max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tabla-usuarios .chip { margin-left: 4px; vertical-align: 1px; }
+.tabla-usuarios tr.es-editando { background: var(--info-soft); }
+.tabla-pie { padding: .7rem .85rem; margin: 0; border-top: 1px solid var(--border-soft); }
+
+/* Botones algo más compactos: en esta tabla hay hasta cinco por fila. */
+.tabla-usuarios td.acc .btn-fila { gap: 5px; }
+.tabla-usuarios td.acc .btn-xs { padding: .26rem .5rem; font-size: .76rem; }
