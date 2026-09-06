@@ -79,6 +79,7 @@ if (es_post()) {
         foreach (['mp_public_key', 'mp_access_token', 'mp_webhook_secret'] as $clave) {
             if (post($clave) !== '') guardar_ajuste($clave, post($clave));
         }
+        guardar_ajuste('mp_modo', post('mp_modo') === 'produccion' ? 'produccion' : 'prueba');
         auditar('pagos_configurados');
         flash_ok('Credenciales de la pasarela guardadas.');
         redirigir('portal/admin/ajustes.php');
@@ -178,6 +179,14 @@ cabecera('Ajustes', [
         <span class="pista">Pégala en Mercado Pago → Webhooks. Al guardarla, el panel genera la clave secreta que va abajo.</span>
       </p>
 
+      <div class="campo">
+        <label for="mp_modo">Modo</label>
+        <select id="mp_modo" name="mp_modo">
+          <option value="prueba" <?= mp_entorno() !== 'produccion' ? 'selected' : '' ?>>Prueba · no se cobra dinero real</option>
+          <option value="produccion" <?= mp_entorno() === 'produccion' ? 'selected' : '' ?>>Producción · cobros reales</option>
+        </select>
+        <span class="pista">Debe coincidir con el juego de credenciales que pegues abajo.</span>
+      </div>
       <div class="campo">
         <label for="mp_public_key">Public Key</label>
         <input type="text" id="mp_public_key" name="mp_public_key" autocomplete="off"

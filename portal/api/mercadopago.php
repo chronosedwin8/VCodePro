@@ -10,14 +10,16 @@
  *   2. Responde 200 de inmediato: Mercado Pago espera una respuesta 2xx en
  *      menos de 22 segundos y reintenta si no la recibe.
  *
- * Qué NO hace todavía: consultar el pago y conciliarlo con una factura. Eso
- * llega cuando se defina el flujo de cobro. Mientras tanto, todo lo recibido
- * queda guardado en la tabla pagos_webhook para poder auditarlo.
+ *   3. Si la notificación es de un pago, lo consulta en la API y concilia la
+ *      factura correspondiente (la marca pagada, reactiva su licencia, o la
+ *      reabre si hubo devolución o contracargo).
+ *
+ * Todo lo recibido queda guardado en pagos_webhook para poder auditarlo.
  */
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../includes/pagos.php';
+require_once __DIR__ . '/../../includes/pagos_api.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -63,7 +65,7 @@ $id = mp_registrar_notificacion([
     'cuerpo'     => $cuerpo,
     'cabeceras'  => json_encode($relevantes, JSON_UNESCAPED_SLASHES),
     'ip'         => $_SERVER['REMOTE_ADDR'] ?? null,
-    'nota'       => 'Recibida; sin procesar (el cobro en línea aún no está implementado).',
+    'nota'       => null,
 ]);
 
 // Con clave secreta configurada, una firma que no cuadra se rechaza.
@@ -72,4 +74,14 @@ if ($firma === 'invalida') {
     json_salida(['ok' => false, 'error' => 'firma_invalida'], 401);
 }
 
-json_salida(['ok' => true, 'recibido' => $id]);
+// Las notificaciones de pago se concilian contra la factura. El resto se
+// registra y se responde 200: Mercado Pago no debe reintentarlas.
+$nota = 'Registrada sin conciliar (tipo no relacionado con pagos).';
+if ($recursoId !== '' && in_array($tipo, ['payment', 'order'], true)) {
+    [$okC, $mensaje] = conciliar_pago($recursoId);
+    $nota = ($okC ? '' : 'Error al conciliar: ') . $mensaje;
+    actualizar('pagos_webhook', ['procesado' => $okC ? 1 : 0, 'nota' => mb_substr($nota, 0, 300)],
+        'id = :id', ['id' => $id]);
+}
+
+json_salida(['ok' => true, 'recibido' => $id, 'nota' => $nota]);

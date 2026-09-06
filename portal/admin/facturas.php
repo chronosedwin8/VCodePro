@@ -6,6 +6,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/layout.php';
+require_once __DIR__ . '/../../includes/pagos_api.php';
 require_once __DIR__ . '/../../includes/academico.php';
 
 $u = exigir_rol('admin');
@@ -43,6 +44,17 @@ if (es_post()) {
         actualizar('facturas', ['estado' => post('valor')], 'id = :id', ['id' => $id]);
         auditar('factura_estado', 'facturas', $id, post('valor'));
         flash_ok('Estado de la factura actualizado.');
+    }
+
+    if ($accion === 'sincronizar' && $id) {
+        $p = fila('SELECT pago_externo FROM pagos WHERE factura_id = ? AND pago_externo IS NOT NULL
+                ORDER BY id DESC LIMIT 1', [$id]);
+        if (!$p) {
+            flash_err('Esa factura no tiene ningún pago en la pasarela.');
+        } else {
+            [$okS, $msg] = conciliar_pago((string) $p['pago_externo']);
+            flash($okS ? 'ok' : 'err', $msg);
+        }
     }
 
     if ($accion === 'eliminar' && $id) {
@@ -116,7 +128,15 @@ cabecera('Facturación', [
             <td class="txt-sm"><?= h($f['concepto']) ?></td>
             <td class="num"><?= moneda((float) $f['monto'], $f['moneda']) ?></td>
             <td class="txt-sm"><?= fecha($f['vence_en']) ?></td>
-            <td><?= etiqueta_estado($f['estado']) ?></td>
+            <td>
+              <?= etiqueta_estado($f['estado']) ?>
+              <?php if ($f['pasarela']): ?>
+                <br><span class="chip chip-azul"><?= h($f['pasarela']) ?></span>
+              <?php endif; ?>
+              <?php if ($f['pagada_en']): ?>
+                <br><span class="txt-sm txt-muted"><?= fecha($f['pagada_en']) ?></span>
+              <?php endif; ?>
+            </td>
             <td class="acc">
               <form method="post" class="btn-fila">
                 <?= csrf_campo() ?>
@@ -127,6 +147,9 @@ cabecera('Facturación', [
                   <button class="btn btn-xs btn-ghost" name="accion" value="estado" onclick="this.form.valor.value='pendiente'">Reabrir</button>
                 <?php endif; ?>
                 <button class="btn btn-xs btn-ghost" name="accion" value="estado" onclick="this.form.valor.value='anulada'" data-confirmar="¿Anular la factura?">Anular</button>
+                <?php if ($f['referencia_pago']): ?>
+                  <button class="btn btn-xs btn-ghost" name="accion" value="sincronizar" title="Volver a consultar el pago en la pasarela">Sincronizar</button>
+                <?php endif; ?>
                 <button class="btn btn-xs btn-err" name="accion" value="eliminar" data-confirmar="¿Eliminar el documento?">Eliminar</button>
                 <input type="hidden" name="valor" value="pagada">
               </form>

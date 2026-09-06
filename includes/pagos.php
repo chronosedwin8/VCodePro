@@ -2,9 +2,8 @@
 /**
  * Configuración y utilidades de la pasarela de pagos (Mercado Pago).
  *
- * Por ahora el portal solo recibe y registra las notificaciones del webhook.
- * El cobro en línea todavía no está implementado: las facturas se emiten y se
- * marcan como pagadas a mano desde el panel de administración.
+ * Aquí viven la configuración, la detección de entorno y la verificación de la
+ * firma del webhook. El cobro propiamente dicho está en pagos_api.php.
  *
  * Las credenciales nunca se escriben en el código: llegan de
  * includes/config.local.php, de variables de entorno o de los ajustes.
@@ -26,12 +25,21 @@ function mp_access_token(): string   { return mp_credencial('MERCADOPAGO_ACCESS_
 function mp_public_key(): string     { return mp_credencial('MERCADOPAGO_PUBLIC_KEY', 'VCP_MP_PUBLIC_KEY', 'mp_public_key'); }
 function mp_webhook_secret(): string { return mp_credencial('MERCADOPAGO_WEBHOOK_SECRET', 'VCP_MP_WEBHOOK_SECRET', 'mp_webhook_secret'); }
 
-/** ¿Las credenciales son de producción o de prueba? Se distingue por el token. */
+/**
+ * Entorno de la pasarela. No se deduce del token: Mercado Pago entrega
+ * credenciales de prueba que también empiezan por APP_USR-, así que el modo lo
+ * declara el administrador en Ajustes (o la constante MERCADOPAGO_MODO).
+ */
 function mp_entorno(): string {
-    $t = mp_access_token();
-    if ($t === '') return 'desconocido';
-    // Los tokens de prueba de Mercado Pago empiezan por TEST-.
-    return str_starts_with($t, 'TEST-') ? 'prueba' : 'produccion';
+    if (mp_access_token() === '') return 'desconocido';
+    if (defined('MERCADOPAGO_MODO')) {
+        return MERCADOPAGO_MODO === 'prueba' ? 'prueba' : 'produccion';
+    }
+    $env = getenv('VCP_MP_MODO');
+    if ($env) return $env === 'prueba' ? 'prueba' : 'produccion';
+    // Los tokens con prefijo TEST- son inequívocamente de prueba.
+    if (str_starts_with(mp_access_token(), 'TEST-')) return 'prueba';
+    return ajuste('mp_modo', 'prueba') === 'produccion' ? 'produccion' : 'prueba';
 }
 
 function mp_configurado(): bool { return mp_access_token() !== ''; }

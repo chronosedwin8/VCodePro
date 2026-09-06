@@ -7,11 +7,28 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/academico.php';
+require_once __DIR__ . '/../../includes/pagos_api.php';
 
 $u = exigir_rol('cliente', 'admin');
 
 if (es_post()) {
     exigir_csrf();
+    if (post('accion') === 'renovar') {
+        $l = fila('SELECT * FROM licencias WHERE id = ? AND (cliente_id = ? OR colegio_id = ?)',
+                  [post_int('licencia_id'), $u['id'], $u['colegio_id']]);
+        if (!$l) {
+            flash_err('Esa licencia no está en tu cuenta.');
+        } else {
+            $f = factura_de_renovacion($l, (int) $u['id']);
+            if ($f) {
+                flash_ok('Emitimos la factura ' . $f['numero'] . ' para la renovación.');
+                redirigir('portal/cliente/pagar.php?factura=' . (int) $f['id']);
+            }
+            flash_err('No se pudo emitir la factura de renovación.');
+        }
+        redirigir('portal/cliente/licencias.php');
+    }
+
     if (post('accion') === 'activar') {
         $clave = mb_strtoupper(trim(post('clave')));
         $l = fila('SELECT * FROM licencias WHERE clave = ?', [$clave]);
@@ -71,8 +88,14 @@ cabecera('Licencias', [
           </dl>
           <div class="form-acc">
             <a class="btn btn-ghost btn-sm" href="<?= url('portal/cliente/puestos.php?licencia=' . (int) $l['id']) ?>">Administrar puestos</a>
-            <?php if ($d < 30): ?>
-              <a class="btn btn-sm" href="<?= url('portal/cliente/soporte.php?asunto=' . urlencode('Renovación de la licencia ' . $l['clave'])) ?>">Solicitar renovación</a>
+            <?php if ($d < 60): ?>
+              <form method="post" style="display:inline">
+                <?= csrf_campo() ?>
+                <input type="hidden" name="accion" value="renovar">
+                <input type="hidden" name="licencia_id" value="<?= (int) $l['id'] ?>">
+                <button class="btn btn-sm" type="submit">Renovar y pagar</button>
+              </form>
+              <a class="btn btn-ghost btn-sm" href="<?= url('portal/cliente/soporte.php?asunto=' . urlencode('Renovación de la licencia ' . $l['clave'])) ?>">Prefiero hablar con ventas</a>
             <?php endif; ?>
           </div>
         </div>

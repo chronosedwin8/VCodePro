@@ -205,9 +205,25 @@ function iniciales(string $nombre, string $apellidos = ''): string {
     return mb_strtoupper($a . $b);
 }
 
+/**
+ * Texto a identificador de URL.
+ *
+ * No se usa iconv con //TRANSLIT: en Windows convierte «á» en «'a» y deja
+ * slugs como «bogot-a». La tabla explícita da el mismo resultado en cualquier
+ * sistema operativo.
+ */
 function slug(string $s): string {
-    $s = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s) ?: $s;
-    $s = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $s) ?? '');
+    $mapa = [
+        'á'=>'a','à'=>'a','ä'=>'a','â'=>'a','ã'=>'a','å'=>'a',
+        'é'=>'e','è'=>'e','ë'=>'e','ê'=>'e',
+        'í'=>'i','ì'=>'i','ï'=>'i','î'=>'i',
+        'ó'=>'o','ò'=>'o','ö'=>'o','ô'=>'o','õ'=>'o',
+        'ú'=>'u','ù'=>'u','ü'=>'u','û'=>'u',
+        'ñ'=>'n','ç'=>'c','ß'=>'ss','ý'=>'y','ÿ'=>'y',
+    ];
+    $s = mb_strtolower(trim($s), 'UTF-8');
+    $s = strtr($s, $mapa);
+    $s = preg_replace('/[^a-z0-9]+/', '-', $s) ?? '';
     return trim($s, '-');
 }
 

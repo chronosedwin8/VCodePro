@@ -51,6 +51,9 @@ cabecera('Facturas', [
       <p>Emitida el <?= fecha($detalle['emitida_en']) ?> · vence el <?= fecha($detalle['vence_en']) ?></p>
     </div>
     <div class="btn-fila no-print">
+      <?php if (in_array($detalle['estado'], ['pendiente', 'vencida'], true)): ?>
+        <a class="btn btn-sm" href="<?= url('portal/cliente/pagar.php?factura=' . (int) $detalle['id']) ?>">Pagar en línea</a>
+      <?php endif; ?>
       <button class="btn btn-ghost btn-sm" onclick="window.print()">Imprimir</button>
       <a class="btn btn-ghost btn-sm" href="<?= url('portal/cliente/facturas.php') ?>">Cerrar</a>
     </div>
@@ -63,6 +66,9 @@ cabecera('Facturas', [
     <?php endif; ?>
     <dt>Monto</dt><dd><strong><?= moneda((float) $detalle['monto'], $detalle['moneda']) ?></strong></dd>
     <dt>Estado</dt><dd><?= etiqueta_estado($detalle['estado']) ?></dd>
+    <?php if ($detalle['pagada_en']): ?>
+      <dt>Pagada</dt><dd><?= fecha($detalle['pagada_en'], true) ?><?= $detalle['referencia_pago'] ? ' · referencia <span class="mono">' . h($detalle['referencia_pago']) . '</span>' : '' ?></dd>
+    <?php endif; ?>
   </dl>
   <p class="txt-sm txt-muted mt-2 mb-0">
     Valores finales sin impuestos añadidos: VCodePro tiene sede en Alemania y la licencia se vende como servicio digital internacional.
@@ -87,7 +93,12 @@ cabecera('Facturas', [
             <td class="num"><?= moneda((float) $f['monto'], $f['moneda']) ?></td>
             <td class="txt-sm"><?= fecha($f['vence_en']) ?></td>
             <td><?= etiqueta_estado($f['estado']) ?></td>
-            <td class="acc"><a class="btn btn-xs btn-ghost" href="<?= url('portal/cliente/facturas.php?ver=' . (int) $f['id']) ?>">Ver</a></td>
+            <td class="acc">
+              <?php if (in_array($f['estado'], ['pendiente', 'vencida'], true)): ?>
+                <a class="btn btn-xs" href="<?= url('portal/cliente/pagar.php?factura=' . (int) $f['id']) ?>">Pagar</a>
+              <?php endif; ?>
+              <a class="btn btn-xs btn-ghost" href="<?= url('portal/cliente/facturas.php?ver=' . (int) $f['id']) ?>">Ver</a>
+            </td>
           </tr>
         <?php endforeach; ?>
         </tbody>

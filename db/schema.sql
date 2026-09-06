@@ -405,6 +405,29 @@ CREATE TABLE IF NOT EXISTS ajustes (
   valor  TEXT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS pagos (
+  id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  factura_id     INT UNSIGNED DEFAULT NULL,
+  cliente_id     INT UNSIGNED DEFAULT NULL,
+  referencia     VARCHAR(60) NOT NULL UNIQUE,
+  pasarela       VARCHAR(30) NOT NULL DEFAULT 'mercadopago',
+  pago_externo   VARCHAR(60) DEFAULT NULL,
+  monto          DECIMAL(14,2) NOT NULL,
+  moneda         CHAR(3) NOT NULL DEFAULT 'COP',
+  estado         ENUM('pendiente','en_proceso','aprobado','rechazado','devuelto','cancelado','contracargo') NOT NULL DEFAULT 'pendiente',
+  estado_detalle VARCHAR(80)  DEFAULT NULL,
+  metodo         VARCHAR(40)  DEFAULT NULL,
+  cuotas         TINYINT UNSIGNED DEFAULT NULL,
+  entorno        ENUM('produccion','prueba','desconocido') NOT NULL DEFAULT 'desconocido',
+  respuesta      MEDIUMTEXT,
+  creado_en      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_pagos_externo (pasarela, pago_externo),
+  INDEX idx_pagos_factura (factura_id),
+  CONSTRAINT fk_pago_fac FOREIGN KEY (factura_id) REFERENCES facturas(id) ON DELETE SET NULL,
+  CONSTRAINT fk_pago_cli FOREIGN KEY (cliente_id) REFERENCES usuarios(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS pagos_webhook (
   id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   origen       VARCHAR(30) NOT NULL DEFAULT 'mercadopago',
