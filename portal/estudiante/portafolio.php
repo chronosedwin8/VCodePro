@@ -58,7 +58,7 @@ cabecera('Portafolio', [
               <?php if ($p['nota_letra']): ?><span class="chip chip-verde">Nota <?= h($p['nota_letra']) ?></span><?php endif; ?>
             </div>
             <h3><a href="<?= url('portal/estudiante/actividad.php?e=' . (int) $p['id']) ?>"><?= h($p['titulo']) ?></a></h3>
-            <p><?= h(corte($p['texto'] ?: $p['resumen'], 200)) ?></p>
+            <p><?= h(corte(rico_plano($p['texto']) ?: $p['resumen'], 200)) ?></p>
             <div class="act-meta">
               <span class="chip chip-gris"><?= h($p['lenguaje']) ?></span>
               <span class="chip chip-azul"><?= h($p['contexto_global']) ?></span>

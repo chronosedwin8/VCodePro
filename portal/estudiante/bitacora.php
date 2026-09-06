@@ -21,7 +21,7 @@ if (es_post()) {
                 'entrega_id'    => post_int('entrega_id') ?: null,
                 'fase'          => in_array(post('fase'), array_keys(FASES_CICLO), true) ? post('fase') : 'general',
                 'titulo'        => post('titulo'),
-                'contenido'     => post('contenido'),
+                'contenido'     => post_rico('contenido'),
                 'minutos'       => post_int('minutos'),
             ]);
             revisar_insignias($u['id']);
@@ -105,7 +105,7 @@ cabecera('Bitácora', [
                 <?= h(nombre_fase($b['fase'])) ?> · <?= fecha($b['creado_en'], true) ?> · <?= (int) $b['minutos'] ?> min
                 <?php if ($b['codigo']): ?> · <span class="act-cod"><?= h($b['codigo']) ?></span><?php endif; ?>
               </time>
-              <?php if ($b['contenido']): ?><p><?= nl($b['contenido']) ?></p><?php endif; ?>
+              <?php if ($b['contenido']): ?><?= bloque_rico($b['contenido']) ?><?php endif; ?>
               <form method="post" style="margin-top:.3rem">
                 <?= csrf_campo() ?>
                 <input type="hidden" name="accion" value="borrar">
@@ -151,7 +151,7 @@ cabecera('Bitácora', [
       </div>
       <div class="campo">
         <label for="contenido">Detalle</label>
-        <textarea id="contenido" name="contenido" placeholder="Qué hiciste, qué no funcionó, qué decidiste y por qué."></textarea>
+        <textarea id="contenido" name="contenido" data-rico placeholder="Qué hiciste, qué no funcionó, qué decidiste y por qué."></textarea>
       </div>
       <button class="btn btn-block" type="submit">Registrar entrada</button>
     </form>

@@ -6,6 +6,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/academico.php';
+require_once __DIR__ . '/../../includes/richtext.php';
 
 header('X-Content-Type-Options: nosniff');
 
@@ -28,7 +29,8 @@ if ($e['estado_asignacion'] === 'cerrada' || in_array($e['estado'], ['revisada']
 $fase = fila('SELECT * FROM actividad_fases WHERE id = ? AND actividad_id = ?', [$faseId, $e['actividad_id']]);
 if (!$fase) json_salida(['ok' => false, 'error' => 'fase_invalida'], 400);
 
-$contenido  = isset($_POST['contenido']) ? (string) $_POST['contenido'] : null;
+// Llega HTML del editor enriquecido: se sanea antes de tocar la base de datos.
+$contenido  = isset($_POST['contenido']) ? rico_sanear((string) $_POST['contenido']) : null;
 $completada = isset($_POST['completada']) ? ($_POST['completada'] === '1') : null;
 
 guardar_fase($entregaId, $faseId, $contenido, $completada);

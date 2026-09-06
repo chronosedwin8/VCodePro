@@ -232,6 +232,7 @@ vcodeproplus/
 │   ├── auth.php                   Sesión, roles, registro y recuperación
 │   ├── academico.php              Entregas, progreso, rúbrica e insignias
 │   ├── phidias.php                Cliente de la API de matrícula del colegio
+│   ├── richtext.php               Lista blanca del HTML que escriben los usuarios
 │   └── layout.php                 Cabecera, menú por rol y pie del portal
 ├── portal/
 │   ├── login.php · registro.php · recuperar.php · logout.php
@@ -248,6 +249,7 @@ vcodeproplus/
     ├── css/styles.css             Sistema de diseño del sitio
     ├── css/portal.css             Capa del portal sobre los mismos tokens
     ├── js/portal.js               Tema, menú, autoguardado, filtros
+    ├── js/editor.js               Editor enriquecido sobre los textarea del portal
     └── uploads/                   Entregas y avatares (fuera del control de versiones)
 ```
 
@@ -305,6 +307,23 @@ Los puntajes de cada criterio se suman y se traducen a la escala IB de 1 a 7:
 El docente puede **devolver para rehacer**: la entrega vuelve al estudiante con la
 retroalimentación y se registra un intento nuevo.
 
+### Editor de texto enriquecido
+
+Todo lo que escriben estudiantes y docentes —fases del ciclo de diseño, descripción de
+la solución, declaración de uso de IA, bitácora, comentarios de rúbrica y conversación—
+se redacta en un editor con negrita, cursiva, subrayado, títulos, listas, citas, bloques
+de código y enlaces.
+
+- Es **mejora progresiva** sobre el `<textarea>` de siempre (`assets/js/editor.js`,
+  JavaScript puro, sin dependencias). Si el JavaScript no carga, el campo sigue siendo un
+  área de texto normal y el trabajo se guarda igual.
+- El textarea no desaparece: se oculta y sigue siendo el campo del formulario, así que el
+  **autoguardado de fases** de `portal.js` funciona sin cambios.
+- Lo que se pega entra siempre como texto plano, sin estilos ni marcas ajenas.
+- Las respuestas antiguas en texto plano se siguen leyendo: solo se interpreta como HTML lo
+  que trae una etiqueta de la lista blanca, de modo que un `if (a < b)` escrito antes no se
+  confunde con marcas.
+
 ### Probidad académica e IA
 
 - Cada entrega incluye una **declaración de uso de IA** que el docente ve al calificar.
@@ -329,6 +348,12 @@ retroalimentación y se registra un intento nuevo.
 - «Recordarme» con esquema selector/validador (el validador se guarda con hash).
 - Recuperación de contraseña con token de un solo uso, hasheado y con una hora de vigencia.
 - Todas las consultas son preparadas; las entradas se limpian a UTF-8 válido.
+- El HTML del editor enriquecido pasa por una **lista blanca** (`includes/richtext.php`):
+  al guardar y otra vez al mostrar. Solo sobreviven `p, br, strong, em, u, s, ul, ol, li,
+  h3, h4, blockquote, code, pre` y `a[href]` con esquema `http`, `https` o `mailto`; el
+  resto de etiquetas pierde el marcado y conserva el texto, y `script`, `style`, `iframe`,
+  `svg` y compañía se eliminan enteras. Sin esto, un estudiante podría guardar un script
+  que se ejecutaría en la sesión del docente que califica.
 - Subidas restringidas por extensión y tamaño, con nombre aleatorio y ejecución deshabilitada.
 - `includes/` y `db/` bloqueados por `.htaccess`; auditoría de todas las acciones sensibles.
 - Ninguna credencial en el repositorio: ver «Credenciales y archivos que no se versionan».

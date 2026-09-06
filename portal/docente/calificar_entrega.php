@@ -37,7 +37,7 @@ if (es_post()) {
             $campo = 'crit_' . (int) $c['id'];
             if (!isset($_POST[$campo]) || $_POST[$campo] === '') continue;
             $puntaje = max(0, min((int) $c['maximo'], (int) $_POST[$campo]));
-            $comentario = post('com_' . (int) $c['id']);
+            $comentario = post_rico('com_' . (int) $c['id']);
             $ex = fila('SELECT id FROM calificaciones WHERE entrega_id = ? AND criterio_id = ?', [$id, $c['id']]);
             if ($ex) {
                 actualizar('calificaciones', [
@@ -56,7 +56,7 @@ if (es_post()) {
         $nuevoEstado = $accion === 'devolver' ? 'rehacer' : 'revisada';
         actualizar('entregas', ['estado' => $nuevoEstado], 'id = :id', ['id' => $id]);
 
-        $retro = post('retroalimentacion');
+        $retro = post_rico('retroalimentacion');
         if ($retro !== '') {
             insertar('comentarios', ['entrega_id' => $id, 'autor_id' => $u['id'], 'mensaje' => $retro]);
         }
@@ -81,14 +81,14 @@ if (es_post()) {
     }
 
     if ($accion === 'comentar') {
-        $m = post('mensaje');
+        $m = post_rico('mensaje');
         if ($m !== '') {
             insertar('comentarios', [
                 'entrega_id' => $id, 'autor_id' => $u['id'], 'mensaje' => $m,
                 'privado' => isset($_POST['privado']) ? 1 : 0,
             ]);
             if (empty($_POST['privado'])) {
-                notificar((int) $e['estudiante_id'], 'Mensaje de tu docente', corte($m, 120),
+                notificar((int) $e['estudiante_id'], 'Mensaje de tu docente', rico_plano($m, 120),
                     'portal/estudiante/actividad.php?e=' . $id);
             }
             flash_ok('Mensaje registrado.');
@@ -144,7 +144,7 @@ cabecera('Calificar', [
       </div>
       <?php if ($e['texto']): ?>
         <p class="campo-label">Descripción de la solución</p>
-        <div class="prosa"><?= nl($e['texto']) ?></div>
+        <?= bloque_rico($e['texto'], 'prosa') ?>
       <?php else: ?>
         <p class="txt-muted">El estudiante no escribió una descripción.</p>
       <?php endif; ?>
@@ -154,7 +154,7 @@ cabecera('Calificar', [
         <dt>Archivo</dt>
         <dd><?= $e['archivo'] ? '<a href="' . URL_SUBIDAS . '/' . h($e['archivo']) . '" target="_blank" rel="noopener">' . h($e['archivo_nombre']) . '</a>' : '—' ?></dd>
         <dt>Uso de IA declarado</dt>
-        <dd><?= $e['uso_ia'] ? nl($e['uso_ia']) : '<span class="txt-muted">Sin declaración</span>' ?></dd>
+        <dd><?= $e['uso_ia'] ? bloque_rico($e['uso_ia']) : '<span class="txt-muted">Sin declaración</span>' ?></dd>
       </dl>
     </div>
 
@@ -172,7 +172,7 @@ cabecera('Calificar', [
             <div class="fase-cuerpo">
               <p class="txt-sm txt-muted"><strong>Evidencia esperada:</strong> <?= h($f['entregable']) ?></p>
               <?php if (trim((string) $f['contenido']) !== ''): ?>
-                <div class="prosa"><?= nl($f['contenido']) ?></div>
+                <?= bloque_rico($f['contenido'], 'prosa') ?>
                 <p class="txt-sm txt-muted mb-0">Última edición: <?= fecha($f['actualizado_en'], true) ?></p>
               <?php else: ?>
                 <p class="txt-muted mb-0">Sin registro en esta fase.</p>
@@ -214,7 +214,7 @@ cabecera('Calificar', [
             </div>
             <div class="campo mt-1 mb-0">
               <label for="com<?= (int) $c['id'] ?>" class="txt-sm">Comentario del criterio</label>
-              <textarea id="com<?= (int) $c['id'] ?>" name="com_<?= (int) $c['id'] ?>" style="min-height:70px"><?= h($califs[(int) $c['id']]['comentario'] ?? '') ?></textarea>
+              <textarea id="com<?= (int) $c['id'] ?>" name="com_<?= (int) $c['id'] ?>" data-rico style="min-height:70px"><?= h($califs[(int) $c['id']]['comentario'] ?? '') ?></textarea>
             </div>
           </div>
         <?php endforeach; ?>
@@ -222,7 +222,7 @@ cabecera('Calificar', [
 
       <div class="campo mt-2">
         <label for="retroalimentacion">Retroalimentación general</label>
-        <textarea id="retroalimentacion" name="retroalimentacion"
+        <textarea id="retroalimentacion" name="retroalimentacion" data-rico
                   placeholder="Qué logró, qué debe mejorar y cuál es el siguiente paso concreto."></textarea>
       </div>
 
@@ -245,7 +245,7 @@ cabecera('Calificar', [
                 <?php if ($c['privado']): ?><span class="chip chip-ambar">nota interna</span><?php endif; ?>
               </h4>
               <time><?= fecha($c['creado_en'], true) ?></time>
-              <p><?= nl($c['mensaje']) ?></p>
+              <?= bloque_rico($c['mensaje']) ?>
             </li>
           <?php endforeach; ?>
         </ul>
@@ -257,7 +257,7 @@ cabecera('Calificar', [
         <input type="hidden" name="accion" value="comentar">
         <div class="campo">
           <label for="mensaje">Escribir</label>
-          <textarea id="mensaje" name="mensaje" style="min-height:80px" required></textarea>
+          <textarea id="mensaje" name="mensaje" data-rico style="min-height:80px" required></textarea>
         </div>
         <label class="check"><input type="checkbox" name="privado" value="1"><span>Nota interna (el estudiante no la ve)</span></label>
         <button class="btn btn-sm" type="submit">Enviar</button>
@@ -296,7 +296,7 @@ cabecera('Calificar', [
             <li>
               <h4><?= h($b['titulo']) ?></h4>
               <time><?= h(nombre_fase($b['fase'])) ?> · <?= fecha($b['creado_en']) ?> · <?= (int) $b['minutos'] ?> min</time>
-              <?php if ($b['contenido']): ?><p><?= nl(corte($b['contenido'], 160)) ?></p><?php endif; ?>
+              <?php if ($b['contenido']): ?><p><?= h(rico_plano($b['contenido'], 160)) ?></p><?php endif; ?>
             </li>
           <?php endforeach; ?>
         </ul>

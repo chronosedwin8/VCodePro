@@ -39,9 +39,9 @@ if (es_post()) {
             if ($sub) [$archivo, $nombreArchivo] = $sub;
         }
         $datos = [
-            'texto'        => post('texto'),
+            'texto'        => post_rico('texto'),
             'url_repo'     => post('url_repo') ?: null,
-            'uso_ia'       => post('uso_ia') ?: null,
+            'uso_ia'       => post_rico('uso_ia') ?: null,
             'estado'       => 'entregada',
             'entregado_en' => date('Y-m-d H:i:s'),
         ];
@@ -61,9 +61,9 @@ if (es_post()) {
 
     if ($accion === 'guardar_borrador' && !$bloqueada) {
         actualizar('entregas', [
-            'texto'    => post('texto'),
+            'texto'    => post_rico('texto'),
             'url_repo' => post('url_repo') ?: null,
-            'uso_ia'   => post('uso_ia') ?: null,
+            'uso_ia'   => post_rico('uso_ia') ?: null,
             'estado'   => $e['estado'] === 'pendiente' ? 'en_progreso' : $e['estado'],
         ], 'id = :id', ['id' => $entregaId]);
         flash_ok('Borrador guardado.');
@@ -80,7 +80,7 @@ if (es_post()) {
                 'entrega_id'    => $entregaId,
                 'fase'          => in_array(post('fase'), array_keys(FASES_CICLO), true) ? post('fase') : 'general',
                 'titulo'        => $titulo,
-                'contenido'     => post('contenido'),
+                'contenido'     => post_rico('contenido'),
                 'minutos'       => post_int('minutos'),
             ]);
             revisar_insignias($u['id']);
@@ -90,11 +90,11 @@ if (es_post()) {
     }
 
     if ($accion === 'comentar') {
-        $m = post('mensaje');
+        $m = post_rico('mensaje');
         if ($m !== '') {
             insertar('comentarios', ['entrega_id' => $entregaId, 'autor_id' => $u['id'], 'mensaje' => $m]);
             notificar((int) valor('SELECT docente_id FROM asignaciones WHERE id = ?', [$e['asignacion_id']]),
-                'Pregunta de ' . $u['nombre'], corte($m, 120),
+                'Pregunta de ' . $u['nombre'], rico_plano($m, 120),
                 'portal/docente/calificar_entrega.php?e=' . $entregaId);
             flash_ok('Mensaje enviado a tu docente.');
         }
@@ -190,7 +190,7 @@ cabecera($act['titulo'], [
 
               <div class="campo mt-2">
                 <label for="fase<?= (int) $f['id'] ?>">Tu trabajo en esta fase</label>
-                <textarea id="fase<?= (int) $f['id'] ?>"
+                <textarea id="fase<?= (int) $f['id'] ?>" data-rico
                           <?= $bloqueada ? 'disabled' : '' ?>
                           data-fase="<?= (int) $f['id'] ?>"
                           data-entrega="<?= $entregaId ?>"
@@ -232,7 +232,7 @@ cabecera($act['titulo'], [
         <?= csrf_campo() ?>
         <div class="campo">
           <label for="texto">Descripción de tu solución</label>
-          <textarea id="texto" name="texto" <?= $bloqueada ? 'disabled' : '' ?>
+          <textarea id="texto" name="texto" data-rico <?= $bloqueada ? 'disabled' : '' ?>
                     placeholder="Explica qué construiste, cómo funciona y qué decisiones tomaste."><?= h($e['texto']) ?></textarea>
         </div>
         <div class="campo-fila">
@@ -252,7 +252,7 @@ cabecera($act['titulo'], [
         </div>
         <div class="campo">
           <label for="uso_ia">Declaración de uso de inteligencia artificial</label>
-          <textarea id="uso_ia" name="uso_ia" style="min-height:90px" <?= $bloqueada ? 'disabled' : '' ?>
+          <textarea id="uso_ia" name="uso_ia" data-rico style="min-height:90px" <?= $bloqueada ? 'disabled' : '' ?>
                     placeholder="Indica qué herramienta usaste, para qué y qué parte del trabajo es tuya. Si no usaste IA, escríbelo."><?= h($e['uso_ia']) ?></textarea>
           <span class="pista">La probidad académica exige declarar el uso de estas herramientas, no evitarlas.</span>
         </div>
@@ -288,7 +288,7 @@ cabecera($act['titulo'], [
             <?php if ($p !== null): ?>
               <?= barra(porcentaje((float) $p, (float) $c['maximo']), $p >= $c['maximo'] * 0.75 ? 'ok' : ($p >= $c['maximo'] * 0.5 ? '' : 'warn')) ?>
               <?php if (!empty($cal['comentario'])): ?>
-                <p class="txt-sm mt-1 mb-0"><?= nl($cal['comentario']) ?></p>
+                <?= bloque_rico($cal['comentario'], 'txt-sm mt-1') ?>
               <?php endif; ?>
             <?php endif; ?>
           </div>
@@ -306,7 +306,7 @@ cabecera($act['titulo'], [
             <li>
               <h4><?= h(trim($c['nombre'] . ' ' . $c['apellidos'])) ?> <span class="chip chip-gris"><?= h(ROLES[$c['rol']] ?? '') ?></span></h4>
               <time><?= fecha($c['creado_en'], true) ?></time>
-              <p><?= nl($c['mensaje']) ?></p>
+              <?= bloque_rico($c['mensaje']) ?>
             </li>
           <?php endforeach; ?>
         </ul>
@@ -318,7 +318,7 @@ cabecera($act['titulo'], [
         <input type="hidden" name="accion" value="comentar">
         <div class="campo">
           <label for="mensaje">Escribir un mensaje</label>
-          <textarea id="mensaje" name="mensaje" style="min-height:90px" required></textarea>
+          <textarea id="mensaje" name="mensaje" data-rico style="min-height:90px" required></textarea>
         </div>
         <button class="btn btn-sm" type="submit">Enviar</button>
       </form>
@@ -408,7 +408,7 @@ cabecera($act['titulo'], [
         </div>
         <div class="campo">
           <label for="bcontenido">Detalle</label>
-          <textarea id="bcontenido" name="contenido" style="min-height:90px" placeholder="Qué no funcionó, qué decidiste y cuál es el siguiente paso."></textarea>
+          <textarea id="bcontenido" name="contenido" data-rico style="min-height:90px" placeholder="Qué no funcionó, qué decidiste y cuál es el siguiente paso."></textarea>
         </div>
         <button class="btn btn-sm btn-block" type="submit">Registrar</button>
       </form>
@@ -419,7 +419,7 @@ cabecera($act['titulo'], [
             <li>
               <h4><?= h($b['titulo']) ?></h4>
               <time><?= h(nombre_fase($b['fase'])) ?> · <?= fecha($b['creado_en'], true) ?> · <?= (int) $b['minutos'] ?> min</time>
-              <?php if ($b['contenido']): ?><p><?= nl(corte($b['contenido'], 180)) ?></p><?php endif; ?>
+              <?php if ($b['contenido']): ?><p><?= h(rico_plano($b['contenido'], 180)) ?></p><?php endif; ?>
             </li>
           <?php endforeach; ?>
         </ul>

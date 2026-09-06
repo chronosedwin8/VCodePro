@@ -6,6 +6,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/richtext.php';
 
 /** Menú lateral según el rol. Cada entrada: [archivo, etiqueta, icono, ruta]. */
 function menu_lateral(string $rol): array {
@@ -221,6 +222,7 @@ function pie(array $op = []): void {
 </footer>
 <?php endif; ?>
 <script src="<?= url('assets/js/portal.js') ?>"></script>
+<script src="<?= url('assets/js/editor.js') ?>"></script>
 </body>
 </html>
 <?php
