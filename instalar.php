@@ -88,6 +88,7 @@ try {
         ['facturas', 'referencia_pago', "VARCHAR(60) DEFAULT NULL AFTER estado"],
         ['facturas', 'pasarela',        "VARCHAR(30) DEFAULT NULL AFTER referencia_pago"],
         ['facturas', 'pagada_en',       "DATETIME DEFAULT NULL AFTER pasarela"],
+        ['pagos',    'preferencia_id',  "VARCHAR(60) DEFAULT NULL AFTER pago_externo"],
     ];
     $agregadas = 0;
     foreach ($columnas as [$tabla, $columna, $definicion]) {

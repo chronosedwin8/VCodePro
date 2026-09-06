@@ -8,7 +8,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/academico.php';
 require_once __DIR__ . '/../../includes/phidias.php';
-require_once __DIR__ . '/../../includes/pagos.php';
+require_once __DIR__ . '/../../includes/pagos_api.php';
 
 $u = exigir_rol('admin');
 
@@ -188,9 +188,10 @@ cabecera('Ajustes', [
         <span class="pista">Debe coincidir con el juego de credenciales que pegues abajo.</span>
       </div>
       <div class="campo">
-        <label for="mp_public_key">Public Key</label>
+        <label for="mp_public_key">Public Key <span class="txt-sm txt-muted">(opcional)</span></label>
         <input type="text" id="mp_public_key" name="mp_public_key" autocomplete="off"
                placeholder="<?= mp_public_key() !== '' ? 'Guardada (' . h(mp_pista(mp_public_key())) . ')' : 'APP_USR-…' ?>">
+        <span class="pista">Con Checkout Pro no hace falta: el portal no sirve ningún formulario de tarjeta.</span>
       </div>
       <div class="campo">
         <label for="mp_access_token">Access Token</label>
@@ -228,9 +229,16 @@ cabecera('Ajustes', [
         </table>
       <?php endif; ?>
 
+      <p class="campo-label mt-2">URL de retorno</p>
+      <p class="txt-sm mb-2">
+        <code class="mono copiar" data-copiar="<?= h(mp_url_retorno()) ?>"
+              style="display:block;padding:.5rem .7rem;border:1px solid var(--border);border-radius:8px;background:var(--bg-alt);word-break:break-all"><?= h(mp_url_retorno()) ?></code>
+        <span class="pista">A donde vuelve el comprador tras pagar. El portal la envía en cada preferencia; no hay que registrarla en el panel.</span>
+      </p>
+
       <p class="txt-sm txt-muted mt-2 mb-0">
-        El cobro en línea todavía no está implementado: las facturas se marcan como pagadas a mano
-        en <a href="<?= url('portal/admin/facturas.php') ?>">Facturación</a>.
+        Integración por <strong>Checkout Pro</strong>: el comprador paga en el sitio de Mercado Pago
+        y el portal nunca recibe datos de tarjeta. Alcance <strong>PCI DSS SAQ A</strong>.
       </p>
     </form>
 

@@ -1,13 +1,18 @@
 <?php
 /**
- * Cobro con Mercado Pago (Checkout API).
+ * Cobro con Mercado Pago (Checkout Pro).
  *
- * El navegador tokeniza la tarjeta con el SDK oficial y envía únicamente el
- * token: los datos de la tarjeta nunca pasan por este servidor.
+ * El portal NUNCA sirve un formulario de tarjeta: crea una preferencia en el
+ * servidor y envía al comprador al dominio de Mercado Pago, que captura y
+ * procesa los datos de pago. Esto mantiene la integración en el alcance
+ * PCI DSS SAQ A, el más liviano, en vez de SAQ A-EP.
  *
- * Contrato de la API verificado contra la referencia oficial:
- *   POST https://api.mercadopago.com/v1/payments
- *   Cabeceras: Authorization: Bearer, Content-Type, X-Idempotency-Key
+ * Contrato verificado contra la referencia oficial:
+ *   POST https://api.mercadopago.com/checkout/preferences   -> init_point
+ *   GET  https://api.mercadopago.com/v1/payments/{id}        -> conciliación
+ *
+ * La verdad del cobro es siempre el webhook y la consulta a la API: nunca los
+ * parámetros que Mercado Pago añade a la URL de retorno, que son falsificables.
  */
 
 declare(strict_types=1);
@@ -96,16 +101,25 @@ function pago_referencia(int $facturaId): string {
     return 'VCP-F' . $facturaId . '-' . strtoupper(bin2hex(random_bytes(4)));
 }
 
+/** URL de retorno del portal tras pasar por Mercado Pago. */
+function mp_url_retorno(): string {
+    $host = $_SERVER['HTTP_HOST'] ?? 'www.vcodepro.de';
+    $esquema = !empty($_SERVER['HTTPS']) ? 'https' : 'http';
+    return $esquema . '://' . $host . url('portal/cliente/pago_retorno.php');
+}
+
 /**
- * Cobra una factura con el token de tarjeta generado en el navegador.
- * Devuelve [aprobado, mensaje, idPagoLocal].
+ * Crea la preferencia de pago de una factura y devuelve la URL de Mercado Pago
+ * a la que hay que enviar al comprador.
+ *
+ * Devuelve [ok, urlOMensaje, idPagoLocal].
  */
-function cobrar_factura(array $factura, array $form, int $clienteId): array {
+function crear_preferencia(array $factura, array $cliente): array {
     $referencia = pago_referencia((int) $factura['id']);
 
     $pagoLocal = insertar('pagos', [
         'factura_id' => (int) $factura['id'],
-        'cliente_id' => $clienteId ?: null,
+        'cliente_id' => (int) $cliente['id'] ?: null,
         'referencia' => $referencia,
         'monto'      => (float) $factura['monto'],
         'moneda'     => $factura['moneda'],
@@ -113,27 +127,35 @@ function cobrar_factura(array $factura, array $form, int $clienteId): array {
         'entorno'    => mp_entorno(),
     ]);
 
+    $retorno = mp_url_retorno();
     $cuerpo = [
-        'transaction_amount' => (float) $factura['monto'],
-        'token'              => $form['token'],
-        'description'        => mb_substr('VCodePro · ' . $factura['concepto'], 0, 250),
-        'installments'       => max(1, (int) $form['installments']),
-        'payment_method_id'  => $form['payment_method_id'],
-        'external_reference' => $referencia,
-        'notification_url'   => mp_url_webhook(),
-        'payer'              => ['email' => $form['email']],
+        'items' => [[
+            'id'          => (string) $factura['numero'],
+            'title'       => mb_substr((string) $factura['concepto'], 0, 250),
+            'description' => 'VCodePro · factura ' . $factura['numero'],
+            'quantity'    => 1,
+            'currency_id' => (string) $factura['moneda'],
+            'unit_price'  => (float) $factura['monto'],
+        ]],
+        'payer' => [
+            'name'    => (string) $cliente['nombre'],
+            'surname' => (string) $cliente['apellidos'],
+            'email'   => (string) $cliente['email'],
+        ],
+        'back_urls' => [
+            'success' => $retorno . '?ref=' . rawurlencode($referencia),
+            'pending' => $retorno . '?ref=' . rawurlencode($referencia),
+            'failure' => $retorno . '?ref=' . rawurlencode($referencia),
+        ],
+        'external_reference'  => $referencia,
+        'notification_url'    => mp_url_webhook(),
+        'statement_descriptor' => 'VCODEPRO',
     ];
-    if (!empty($form['issuer_id']))  $cuerpo['issuer_id'] = $form['issuer_id'];
-    if (!empty($form['doc_numero'])) {
-        $cuerpo['payer']['identification'] = [
-            'type'   => $form['doc_tipo'] ?: 'CC',
-            'number' => $form['doc_numero'],
-        ];
-    }
 
-    // La clave de idempotencia es la referencia: si el navegador reenvía el
-    // formulario, Mercado Pago devuelve el mismo pago en vez de cobrar dos veces.
-    [$ok, $resp] = mp_api('POST', '/v1/payments', $cuerpo, $referencia);
+    // auto_return exige URLs públicas accesibles; en local se omite.
+    if (!empty($_SERVER['HTTPS'])) $cuerpo['auto_return'] = 'approved';
+
+    [$ok, $resp] = mp_api('POST', '/checkout/preferences', $cuerpo, $referencia);
 
     if (!$ok) {
         actualizar('pagos', [
@@ -141,26 +163,43 @@ function cobrar_factura(array $factura, array $form, int $clienteId): array {
             'estado_detalle' => mb_substr((string) $resp, 0, 80),
             'respuesta'      => (string) $resp,
         ], 'id = :id', ['id' => $pagoLocal]);
-        auditar('pago_error', 'pagos', $pagoLocal, (string) $resp);
+        auditar('preferencia_error', 'pagos', $pagoLocal, (string) $resp);
         return [false, (string) $resp, $pagoLocal];
     }
 
-    $estado  = mp_estado((string) ($resp['status'] ?? ''));
-    $detalle = (string) ($resp['status_detail'] ?? '');
+    $destino = mp_entorno() === 'produccion'
+        ? (string) ($resp['init_point'] ?? '')
+        : (string) ($resp['sandbox_init_point'] ?? $resp['init_point'] ?? '');
+
+    if ($destino === '') {
+        auditar('preferencia_sin_url', 'pagos', $pagoLocal);
+        return [false, 'Mercado Pago no devolvió la dirección de pago.', $pagoLocal];
+    }
 
     actualizar('pagos', [
-        'pago_externo'   => (string) ($resp['id'] ?? ''),
-        'estado'         => $estado,
-        'estado_detalle' => mb_substr($detalle, 0, 80),
-        'metodo'         => mb_substr((string) ($resp['payment_method_id'] ?? ''), 0, 40),
-        'cuotas'         => (int) ($resp['installments'] ?? 1),
+        'preferencia_id' => mb_substr((string) ($resp['id'] ?? ''), 0, 60),
         'respuesta'      => mb_substr(json_encode($resp, JSON_UNESCAPED_UNICODE) ?: '', 0, 60000),
     ], 'id = :id', ['id' => $pagoLocal]);
 
-    if ($estado === 'aprobado') aplicar_pago_aprobado($pagoLocal);
+    auditar('preferencia_creada', 'pagos', $pagoLocal, (string) $factura['numero']);
+    return [true, $destino, $pagoLocal];
+}
 
-    auditar('pago_' . $estado, 'pagos', $pagoLocal, $factura['numero'] . ' · ' . $detalle);
-    return [$estado === 'aprobado', mp_motivo($detalle), $pagoLocal];
+/**
+ * Sincroniza el estado de un cobro a partir de su referencia propia, buscando
+ * en Mercado Pago los pagos asociados. Se usa al volver del checkout, donde no
+ * se puede confiar en los parámetros de la URL.
+ */
+function conciliar_por_referencia(string $referencia): array {
+    [$ok, $resp] = mp_api('GET', '/v1/payments/search?external_reference=' . rawurlencode($referencia));
+    if (!$ok) return [false, (string) $resp];
+
+    $resultados = $resp['results'] ?? [];
+    if (!$resultados) return [true, 'Todavía no hay ningún pago registrado para esta factura.'];
+
+    // El más reciente manda.
+    usort($resultados, fn($a, $b) => strcmp((string) ($b['date_created'] ?? ''), (string) ($a['date_created'] ?? '')));
+    return conciliar_pago((string) ($resultados[0]['id'] ?? ''));
 }
 
 /**

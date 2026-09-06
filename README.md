@@ -169,6 +169,55 @@ Al ser una llamada desde el servidor, no hay problemas de CORS ni hace falta nin
 
 ---
 
+## Pasarela de pagos
+
+Cobro con **Mercado Pago · Checkout Pro**. El portal **nunca sirve un formulario de tarjeta**:
+crea una preferencia en el servidor y envía al comprador al sitio de Mercado Pago, que captura
+y procesa el pago. Eso mantiene la integración en el alcance **PCI DSS SAQ A** —el más
+liviano— en vez de SAQ A-EP, que exigiría escaneos ASV trimestrales.
+
+### Flujo
+
+```
+Cliente pulsa Pagar
+  -> POST /checkout/preferences        (servidor, con Access Token)
+  -> redirección a init_point          (dominio de Mercado Pago)
+  -> el comprador paga allí            (tarjeta, PSE, efectivo o saldo)
+  -> vuelve a portal/cliente/pago_retorno.php
+  -> el portal RECONSULTA la API        (no confía en la URL de retorno)
+  -> el webhook confirma en firme y marca la factura
+```
+
+### Tres puntos de cobro
+
+| Dónde | Qué hace |
+|---|---|
+| **Cliente → Facturas** | Botón *Pagar* en cada factura pendiente o vencida |
+| **Cliente → Licencias** | *Renovar y pagar* emite la factura y lleva al cobro |
+| **`comprar.php`** | Autocompra desde `precios.html`: crea colegio, cuenta, licencia y factura |
+
+### Garantías
+
+- **Idempotencia**: la referencia propia viaja como `X-Idempotency-Key` y como
+  `external_reference`, así que reenviar el formulario no cobra dos veces.
+- **La URL de retorno no decide nada**: `payment_id` y `status` son falsificables a mano, así
+  que el portal vuelve a preguntar a la API por su propia referencia antes de mostrar el
+  resultado.
+- **El webhook es la fuente de verdad**: marca la factura, reactiva la licencia y le extiende la
+  vigencia si era una renovación. Una devolución o un contracargo reabren la factura y avisan.
+- Todo intento queda en la tabla `pagos` con su respuesta cruda para auditoría.
+
+### Configuración
+
+En **Admin → Ajustes → Pasarela de pagos** se pegan el Access Token, la clave secreta del
+webhook y el **modo** (prueba o producción). El modo se declara a mano porque las credenciales
+de prueba de esta cuenta también empiezan por `APP_USR-` y no se pueden distinguir del token
+de producción. La Public Key es opcional: con Checkout Pro el portal no la usa.
+
+URL del webhook y URL de retorno se muestran en ese mismo panel, listas para copiar.
+
+---
+
 ## Estructura
 
 ```

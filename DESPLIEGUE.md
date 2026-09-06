@@ -178,7 +178,7 @@ Desde el directorio raíz del sitio y con el usuario del sitio:
 php instalar.php "UnaClaveFuerteParaElAdministrador"
 ```
 
-Debe terminar con las 28 tablas, los 7 niveles y las 84 actividades. Después:
+Debe terminar con las 30 tablas, los 7 niveles y las 133 actividades. Después:
 
 ```bash
 rm instalar.php
@@ -232,7 +232,7 @@ DELETE FROM tickets;
 ```
 
 Las cascadas de la base de datos se llevan sus grupos, asignaciones y entregas. El
-administrador, los 7 niveles y las 84 actividades no se tocan.
+administrador, los 7 niveles y las 133 actividades no se tocan.
 
 Comprueba después que solo queda tu cuenta:
 
@@ -255,6 +255,26 @@ Entra como administrador y ve a **Docente → Importar de Phidias**.
 
 ---
 
+## 10 bis. Activar el cobro en línea
+
+1. En el panel de Mercado Pago, cambia el **producto integrado de tu aplicación a
+   Checkout Pro**. Hoy figura como *Checkout API*, que es la modalidad que obliga a
+   PCI DSS SAQ A-EP; el portal ya no la usa.
+2. **Rota las credenciales de producción** si alguna vez las compartiste por chat o correo.
+3. En **Admin → Ajustes → Pasarela de pagos** pega el Access Token, elige el modo y guarda.
+4. Copia de ese panel la **URL del webhook** y regístrala en Mercado Pago (modo de prueba y
+   modo productivo). Pega la clave secreta que genera al guardarla.
+5. Deja marcados solo los eventos que aplican: **Order**, **Contracargos** y **Reclamos**.
+   *Envíos*, *Card Updater*, *Point*, *Delivery* y *Wallet Connect* no aplican a un servicio
+   digital y solo generan ruido.
+6. Haz **una compra real de bajo monto** en modo producción y compruébala de punta a punta:
+   factura pagada, licencia activa y notificación recibida en Admin → Ajustes.
+
+La URL de retorno no hay que registrarla en ningún sitio: el portal la envía en cada
+preferencia. Sí debe ser **pública y con HTTPS**, o el retorno automático no funcionará.
+
+---
+
 ## 11. Verificación final
 
 ```bash
@@ -271,6 +291,9 @@ curl -so /dev/null -w "%{http_code} instalar.php\n"         https://www.vcodepro
 
 # El sitemap y el robots apuntan al dominio correcto
 curl -s https://www.vcodepro.de/robots.txt
+
+# El webhook responde
+curl -s https://www.vcodepro.de/portal/api/mercadopago.php
 ```
 
 Y en el navegador:

@@ -412,6 +412,7 @@ CREATE TABLE IF NOT EXISTS pagos (
   referencia     VARCHAR(60) NOT NULL UNIQUE,
   pasarela       VARCHAR(30) NOT NULL DEFAULT 'mercadopago',
   pago_externo   VARCHAR(60) DEFAULT NULL,
+  preferencia_id VARCHAR(60) DEFAULT NULL,
   monto          DECIMAL(14,2) NOT NULL,
   moneda         CHAR(3) NOT NULL DEFAULT 'COP',
   estado         ENUM('pendiente','en_proceso','aprobado','rechazado','devuelto','cancelado','contracargo') NOT NULL DEFAULT 'pendiente',
