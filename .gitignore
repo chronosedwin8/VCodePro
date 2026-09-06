@@ -20,3 +20,8 @@ includes/config.local.php
 # Caché de la integración con Phidias
 assets/uploads/cache/*
 !assets/uploads/cache/.gitkeep
+
+# Copias de la base de datos. Llevan la matrícula real —nombres de menores,
+# correos y hashes de contraseñas—, así que nunca se versionan.
+db/*.sql
+!db/schema.sql
