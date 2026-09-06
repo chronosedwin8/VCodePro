@@ -20,7 +20,7 @@ if (es_post()) {
         'programa_ib'       => post('programa_ib'),
         'asignatura'        => post('asignatura'),
         'edad'              => post('edad'),
-        'descripcion'       => post('descripcion'),
+        'descripcion'       => post_rico('descripcion'),
         'contenidos'        => post('contenidos'),
         'proyecto_insignia' => post('proyecto_insignia'),
         'lenguajes'         => post('lenguajes'),
@@ -82,7 +82,7 @@ cabecera('Niveles IB', [
             <a class="btn btn-xs btn-ghost" href="<?= url('portal/admin/niveles.php?editar=' . (int) $n['id']) ?>">Editar</a>
           </div>
         </div>
-        <p class="txt-sm"><?= h($n['descripcion']) ?></p>
+        <?= bloque_rico($n['descripcion'], 'txt-sm') ?>
         <p class="campo-label">Contenidos centrales</p>
         <div class="act-meta">
           <?php foreach (lista($n['contenidos']) as $c): ?><span class="chip chip-gris"><?= h($c) ?></span><?php endforeach; ?>
@@ -115,7 +115,7 @@ cabecera('Niveles IB', [
         <div class="campo"><label for="edad">Edad</label><input type="text" id="edad" name="edad" value="<?= h($edit['edad'] ?? '') ?>" placeholder="14 a 15 años"></div>
       </div>
       <div class="campo"><label for="asignatura">Asignatura</label><input type="text" id="asignatura" name="asignatura" value="<?= h($edit['asignatura'] ?? '') ?>"></div>
-      <div class="campo"><label for="descripcion">Descripción</label><textarea id="descripcion" name="descripcion" style="min-height:90px"><?= h($edit['descripcion'] ?? '') ?></textarea></div>
+      <div class="campo"><label for="descripcion">Descripción</label><textarea id="descripcion" name="descripcion" data-rico style="min-height:90px"><?= h($edit['descripcion'] ?? '') ?></textarea></div>
       <div class="campo">
         <label for="contenidos">Contenidos centrales</label>
         <textarea id="contenidos" name="contenidos" style="min-height:80px"><?= h($edit['contenidos'] ?? '') ?></textarea>

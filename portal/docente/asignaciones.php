@@ -31,7 +31,7 @@ if ($id) {
             actualizar('asignaciones', [
                 'fecha_inicio'  => post('fecha_inicio') ?: $a['fecha_inicio'],
                 'fecha_entrega' => post('fecha_entrega') ?: $a['fecha_entrega'],
-                'instrucciones' => post('instrucciones') ?: null,
+                'instrucciones' => post_rico('instrucciones') ?: null,
                 'peso'          => (float) post('peso', '1'),
                 'ia_permitida'  => isset($_POST['ia_permitida']) ? 1 : 0,
                 'estado'        => in_array(post('estado'), ['borrador', 'abierta', 'cerrada'], true) ? post('estado') : $a['estado'],
@@ -139,7 +139,7 @@ if ($id) {
           </div>
           <div class="campo">
             <label for="instrucciones">Indicaciones</label>
-            <textarea id="instrucciones" name="instrucciones" style="min-height:90px"><?= h($a['instrucciones']) ?></textarea>
+            <textarea id="instrucciones" name="instrucciones" data-rico style="min-height:90px"><?= h($a['instrucciones']) ?></textarea>
           </div>
           <label class="check"><input type="checkbox" name="ia_permitida" value="1" <?= $a['ia_permitida'] ? 'checked' : '' ?>><span>Permitir asistencia de IA</span></label>
           <button class="btn btn-block" type="submit">Guardar</button>

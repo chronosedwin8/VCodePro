@@ -145,14 +145,15 @@ cabecera($act['titulo'], [
         <h2>La actividad</h2>
         <span class="chip chip-crit">Criterios <?= h($act['criterios_ib']) ?></span>
       </div>
-      <div class="prosa"><?= $act['descripcion'] ?></div>
+      <?= bloque_rico($act['descripcion'], 'prosa') ?>
       <?php if ($act['pregunta_indagacion']): ?>
         <p class="mb-0" style="border-left:3px solid var(--brand);background:var(--bg-alt);padding:12px 14px;border-radius:0 8px 8px 0">
           <strong>Pregunta de indagación.</strong> <?= h($act['pregunta_indagacion']) ?>
         </p>
       <?php endif; ?>
       <?php if ($e['instrucciones']): ?>
-        <p class="mt-2 mb-0"><strong>Indicaciones de tu docente:</strong> <?= nl($e['instrucciones']) ?></p>
+        <p class="campo-label mt-2">Indicaciones de tu docente</p>
+        <?= bloque_rico($e['instrucciones']) ?>
       <?php endif; ?>
 
       <div class="rejilla rej-2 mt-2">
@@ -187,7 +188,7 @@ cabecera($act['titulo'], [
               <span class="fase-tag"><?= (int) $f['minutos'] ?> min</span>
             </summary>
             <div class="fase-cuerpo">
-              <p><?= nl($f['instrucciones']) ?></p>
+              <?= bloque_rico($f['instrucciones']) ?>
               <p class="entregable"><strong>Evidencia de esta fase:</strong> <?= h($f['entregable']) ?></p>
 
               <div class="campo mt-2">

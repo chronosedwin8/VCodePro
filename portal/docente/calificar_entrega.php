@@ -314,7 +314,7 @@ cabecera('Calificar', [
 
     <div class="panel">
       <div class="panel-h"><h3>Indicaciones dadas</h3></div>
-      <p class="txt-sm mb-0"><?= $e['instrucciones'] ? nl($e['instrucciones']) : '<span class="txt-muted">Sin indicaciones adicionales.</span>' ?></p>
+      <?= $e['instrucciones'] ? bloque_rico($e['instrucciones'], 'txt-sm') : '<p class="txt-sm txt-muted mb-0">Sin indicaciones adicionales.</p>' ?>
       <p class="txt-sm txt-muted mt-2 mb-0">Asistencia de IA: <?= $e['ia_permitida'] ? 'permitida' : 'desactivada' ?>.</p>
     </div>
   </aside>

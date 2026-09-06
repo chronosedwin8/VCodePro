@@ -25,7 +25,7 @@ if (es_post()) {
             'codigo'              => post('codigo'),
             'titulo'              => post('titulo'),
             'resumen'             => post('resumen'),
-            'descripcion'         => post('descripcion'),
+            'descripcion'         => post_rico('descripcion'),
             'pregunta_indagacion' => post('pregunta_indagacion') ?: null,
             'criterios_ib'        => post('criterios_ib') ?: 'A,B,C,D',
             'contexto_global'     => post('contexto_global'),
@@ -91,7 +91,7 @@ if (es_post()) {
         $datos = [
             'fase'          => in_array(post('fase'), array_keys(FASES_CICLO), true) ? post('fase') : 'indagar',
             'titulo'        => post('titulo'),
-            'instrucciones' => post('instrucciones'),
+            'instrucciones' => post_rico('instrucciones'),
             'entregable'    => post('entregable'),
             'minutos'       => post_int('minutos'),
             'orden'         => post_int('orden'),
@@ -214,8 +214,8 @@ cabecera($a ? 'Editar actividad' : 'Nueva actividad', [
   </div>
   <div class="campo">
     <label for="descripcion">Descripción</label>
-    <textarea id="descripcion" name="descripcion" style="min-height:160px"><?= h($a['descripcion'] ?? '') ?></textarea>
-    <span class="pista">Admite HTML sencillo: &lt;p&gt;, &lt;strong&gt;, &lt;code&gt;, &lt;ul&gt;.</span>
+    <textarea id="descripcion" name="descripcion" data-rico style="min-height:160px"><?= h($a['descripcion'] ?? '') ?></textarea>
+    <span class="pista">Es lo primero que lee el estudiante al abrir la actividad. Da contexto y di qué va a construir.</span>
   </div>
   <div class="campo">
     <label for="pregunta_indagacion">Pregunta de indagación</label>
@@ -332,7 +332,7 @@ cabecera($a ? 'Editar actividad' : 'Nueva actividad', [
         <div class="campo"><label>Orden</label><input type="number" name="orden" value="<?= (int) $f['orden'] ?>" min="0" max="99"></div>
       </div>
       <div class="campo"><label>Título de la fase</label><input type="text" name="titulo" value="<?= h($f['titulo']) ?>" required></div>
-      <div class="campo"><label>Instrucciones</label><textarea name="instrucciones" style="min-height:100px"><?= h($f['instrucciones']) ?></textarea></div>
+      <div class="campo"><label>Instrucciones</label><textarea name="instrucciones" data-rico style="min-height:100px"><?= h($f['instrucciones']) ?></textarea></div>
       <div class="campo"><label>Evidencia esperada</label><input type="text" name="entregable" value="<?= h($f['entregable']) ?>" maxlength="300"></div>
       <div class="btn-fila">
         <button class="btn btn-sm" type="submit">Guardar fase</button>
@@ -356,7 +356,7 @@ cabecera($a ? 'Editar actividad' : 'Nueva actividad', [
           <div class="campo"><label>Orden</label><input type="number" name="orden" value="<?= count($a['fases']) + 1 ?>" min="0" max="99"></div>
         </div>
         <div class="campo"><label>Título</label><input type="text" name="titulo" required></div>
-        <div class="campo"><label>Instrucciones</label><textarea name="instrucciones" style="min-height:90px"></textarea></div>
+        <div class="campo"><label>Instrucciones</label><textarea name="instrucciones" data-rico style="min-height:90px"></textarea></div>
         <div class="campo"><label>Evidencia esperada</label><input type="text" name="entregable" maxlength="300"></div>
         <button class="btn btn-sm" type="submit">Agregar fase</button>
       </form>

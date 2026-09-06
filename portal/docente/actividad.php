@@ -31,7 +31,7 @@ if (es_post()) {
                 'docente_id'    => (int) $g['docente_id'],
                 'fecha_inicio'  => post('fecha_inicio') ?: date('Y-m-d'),
                 'fecha_entrega' => $entrega,
-                'instrucciones' => post('instrucciones') ?: null,
+                'instrucciones' => post_rico('instrucciones') ?: null,
                 'ia_permitida'  => isset($_POST['ia_permitida']) ? 1 : 0,
                 'estado'        => 'abierta',
             ]);
@@ -71,7 +71,7 @@ cabecera($act['titulo'], [
   <div>
     <div class="panel">
       <div class="panel-h"><h2>Descripción</h2><p><?= (int) $act['sesiones'] ?> sesiones · <?= (float) $act['horas'] ?> h · <?= $totalMin ?> min de trabajo guiado</p></div>
-      <div class="prosa"><?= $act['descripcion'] ?></div>
+      <?= bloque_rico($act['descripcion'], 'prosa') ?>
       <?php if ($act['pregunta_indagacion']): ?>
         <p class="mb-0" style="border-left:3px solid var(--brand);background:var(--bg-alt);padding:12px 14px;border-radius:0 8px 8px 0">
           <strong>Pregunta de indagación.</strong> <?= h($act['pregunta_indagacion']) ?>
@@ -100,7 +100,7 @@ cabecera($act['titulo'], [
               <span class="fase-tag"><?= (int) $f['minutos'] ?> min</span>
             </summary>
             <div class="fase-cuerpo">
-              <p><?= nl($f['instrucciones']) ?></p>
+              <?= bloque_rico($f['instrucciones']) ?>
               <p class="entregable"><strong>Evidencia esperada:</strong> <?= h($f['entregable']) ?></p>
             </div>
           </details>
@@ -160,7 +160,7 @@ cabecera($act['titulo'], [
         </div>
         <div class="campo">
           <label for="instrucciones">Indicaciones para el grupo</label>
-          <textarea id="instrucciones" name="instrucciones" style="min-height:90px" placeholder="Trabajo individual o en parejas, materiales, condiciones de entrega…"></textarea>
+          <textarea id="instrucciones" name="instrucciones" data-rico style="min-height:90px" placeholder="Trabajo individual o en parejas, materiales, condiciones de entrega…"></textarea>
         </div>
         <label class="check"><input type="checkbox" name="ia_permitida" value="1" <?= $act['ia_sugerida'] ? 'checked' : '' ?>><span>Permitir asistencia de IA</span></label>
         <button class="btn btn-block" type="submit">Asignar actividad</button>

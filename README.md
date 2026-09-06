@@ -323,10 +323,19 @@ retroalimentación y se registra un intento nuevo.
 
 ### Editor de texto enriquecido
 
-Todo lo que escriben estudiantes y docentes —fases del ciclo de diseño, descripción de
-la solución, declaración de uso de IA, bitácora, comentarios de rúbrica y conversación—
-se redacta en un editor con negrita, cursiva, subrayado, títulos, listas, citas, bloques
-de código y enlaces.
+Se redacta con formato —negrita, cursiva, subrayado, títulos, listas, citas, bloques de
+código y enlaces— todo lo que una persona escribe para que otra lo lea:
+
+| Quién | Dónde |
+|---|---|
+| Estudiante | Fases del ciclo de diseño, descripción de la solución, declaración de uso de IA, bitácora, mensajes al docente |
+| Docente | Comentarios de cada criterio, retroalimentación general, mensajes, e **indicaciones al asignar** una actividad a un grupo |
+| Coordinación | **Descripción de una actividad**, **instrucciones de cada fase** y descripción de un nivel |
+
+Quedan a propósito en texto plano los campos que no son prosa: los objetivos, entregables y
+contenidos son listas de una línea por elemento que el portal ya convierte en viñetas; los
+descriptores de rúbrica, las notas de licencia y la lista de importación de estudiantes son
+datos, no redacción.
 
 - Es **mejora progresiva** sobre el `<textarea>` de siempre (`assets/js/editor.js`,
   JavaScript puro, sin dependencias). Si el JavaScript no carga, el campo sigue siendo un
