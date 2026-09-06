@@ -26,7 +26,7 @@ El repositorio no contiene ninguna contraseña. La de la base de datos llega de
 inicial, del primer argumento de `instalar.php` o de `VCP_ADMIN_PASS`. Si no se
 indica ninguna, el instalador **genera una al azar y la muestra al terminar**.
 
-El instalador crea la base de datos, aplica el esquema, carga los siete niveles con sus **84 actividades**, las insignias, el administrador inicial y un colegio de demostración. Es
+El instalador crea la base de datos, aplica el esquema, carga los siete niveles con sus **133 actividades**, las insignias, el administrador inicial y un colegio de demostración. Es
 idempotente: puede ejecutarse varias veces sin duplicar datos.
 
 ### Cuentas creadas por el instalador
@@ -47,7 +47,7 @@ Cambia las contraseñas de demostración antes de publicar el portal.
 php db/estudiante_demo.php [correo] [contraseña]
 ```
 
-Crea un estudiante matriculado en un grupo por cada nivel, con **las 84 actividades asignadas**,
+Crea un estudiante matriculado en un grupo por cada nivel, con **las 133 actividades asignadas**,
 para revisar el banco tal como lo ve un estudiante. Sin argumentos usa
 `tic@colegioaleman.edu.co`. Si la cuenta ya existe y no indicas contraseña, conserva la que
 tenía. El script es idempotente: al repetirlo solo agrega lo que falte.
@@ -194,7 +194,7 @@ vcodeproplus/
 │   └── api/                       Guardado por fases, tema y formulario de contacto
 ├── db/
 │   ├── schema.sql                 28 tablas InnoDB utf8mb4
-│   └── seed/                      Niveles, rúbricas base, 70 actividades y 14 de uso de IA
+│   └── seed/                      Niveles, rúbricas base y los cuatro bancos de actividades
 └── assets/
     ├── css/styles.css             Sistema de diseño del sitio
     ├── css/portal.css             Capa del portal sobre los mismos tokens
@@ -218,14 +218,16 @@ vcodeproplus/
 | 11.º | DP 1 · Informática NM y NS | Representación, arquitectura, redes, estructuras de datos, algoritmos, ML | Propuesta de la evaluación interna |
 | 12.º | DP 2 · Informática NS, ITGS | Desarrollo, pruebas, optimización, documentación, ITGS, monografía | Solución final y portafolio |
 
-**12 actividades por nivel · 84 en total** (10 del plan base y 2 de uso de asistentes de IA). Cada actividad trae:
+**19 actividades por nivel · 133 en total**: 10 del plan base, 2 de uso de asistentes de IA y 7 de
+ampliación repartidas en cuatro ejes —sociedad digital, proyectos en Python, robótica e IA aplicada
+al aprendizaje—. Cada actividad trae:
 
 - resumen, descripción y pregunta de indagación;
 - contexto global, concepto clave, atributos del perfil y enfoques del aprendizaje;
 - objetivos y entregables;
-- las **cuatro fases del ciclo de diseño** con instrucciones y evidencia esperada (336 fases);
+- las **cuatro fases del ciclo de diseño** con instrucciones y evidencia esperada (532 fases);
 - **rúbrica con descriptores** por banda —criterios A–D del PAI en 6.º a 10.º y A–E de la
-  evaluación interna del Diploma en 11.º y 12.º (360 criterios);
+  evaluación interna del Diploma en 11.º y 12.º (570 criterios);
 - recursos para el docente y código de inicio para el estudiante.
 
 ### Flujo de trabajo
@@ -261,6 +263,9 @@ retroalimentación y se registra un intento nuevo.
 - Dos actividades por nivel exigen usar un asistente de propósito general (ChatGPT, Claude,
   Gemini o el que autorice el colegio) con verificación independiente, registro íntegro de las
   conversaciones y autoría marcada.
+- El banco de ampliación añade siete por nivel: ciudadanía y sociedad digital, proyectos
+  completos en Python, robótica —con placa física o con simulador— e IA usada como herramienta
+  de estudio, siempre midiendo si de verdad ayudó a aprender.
 - Las demás actividades de IA son de diseño de agentes, no de consumo: el estudiante define
   propósito, alcance, reglas y prohibiciones, y mide el resultado.
 

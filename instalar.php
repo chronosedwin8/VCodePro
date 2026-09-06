@@ -126,13 +126,20 @@ try {
     $totalAct = 0; $totalFases = 0; $totalRub = 0;
     // Banco complementario de actividades con uso de asistentes de IA,
     // indexado por código de nivel.
-    $archivoIa = __DIR__ . '/db/seed/actividades_ia.php';
-    $bancoIa = is_file($archivoIa) ? require $archivoIa : [];
+    // Bancos complementarios indexados por código de nivel: uso de asistentes
+    // de IA y ampliación (sociedad digital, Python, robótica e IA para aprender).
+    $complementarios = [];
+    foreach (['actividades_ia', 'actividades_amp_a', 'actividades_amp_b', 'actividades_amp_c'] as $banco) {
+        $ruta = __DIR__ . '/db/seed/' . $banco . '.php';
+        if (is_file($ruta)) $complementarios[] = require $ruta;
+    }
 
     foreach (array_keys($idNivel) as $codNivel) {
         $archivo = __DIR__ . '/db/seed/actividades_' . strtolower($codNivel) . '.php';
         $lista = is_file($archivo) ? require $archivo : [];
-        $lista = array_merge($lista, $bancoIa[$codNivel] ?? []);
+        foreach ($complementarios as $banco) {
+            $lista = array_merge($lista, $banco[$codNivel] ?? []);
+        }
         if (!$lista) { nota("Sin banco de actividades para $codNivel."); continue; }
         $orden = 0;
         foreach ($lista as $a) {
