@@ -104,7 +104,7 @@ function pago_referencia(int $facturaId): string {
 /** URL de retorno del portal tras pasar por Mercado Pago. */
 function mp_url_retorno(): string {
     $host = $_SERVER['HTTP_HOST'] ?? 'www.vcodepro.de';
-    $esquema = !empty($_SERVER['HTTPS']) ? 'https' : 'http';
+    $esquema = esquema_publico();
     return $esquema . '://' . $host . url('portal/cliente/pago_retorno.php');
 }
 
@@ -153,7 +153,7 @@ function crear_preferencia(array $factura, array $cliente): array {
     ];
 
     // auto_return exige URLs públicas accesibles; en local se omite.
-    if (!empty($_SERVER['HTTPS'])) $cuerpo['auto_return'] = 'approved';
+    if (esquema_publico() === 'https') $cuerpo['auto_return'] = 'approved';
 
     [$ok, $resp] = mp_api('POST', '/checkout/preferences', $cuerpo, $referencia);
 

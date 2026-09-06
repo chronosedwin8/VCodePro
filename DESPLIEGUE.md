@@ -350,6 +350,47 @@ hasta que un docente las revisa y las publica. Al publicarlas, la calificación 
 firmada por esa persona. En el IB la responsabilidad de la evaluación no se delega.
 
 ---
+## 10 quinquies. Ingreso con Microsoft
+
+Permite entrar con la cuenta institucional en vez de con una contraseña del portal. Es
+opcional: sin configurar, el botón no aparece y todo sigue igual.
+
+En **Azure → App registrations → tu aplicación**:
+
+1. **Authentication → Add a platform → Web**, y añade como *Redirect URI*:
+
+   ```
+   https://www.vcodepro.de/portal/sso.php
+   ```
+
+   Tiene que coincidir carácter por carácter, incluido el `https` y la ausencia de barra
+   final. El portal la muestra calculada en **Ajustes → Ingreso con Microsoft**.
+
+2. **Certificates & secrets → New client secret.** Copia el **Value** (no el *Secret ID*):
+   solo se ve una vez. Anota la fecha de caducidad y renuévalo antes de que expire, o el
+   ingreso dejará de funcionar de golpe.
+
+3. Copia de **Overview** el *Application (client) ID* y el *Directory (tenant) ID*.
+
+4. Pon los tres valores en `includes/config.local.php` o en **Ajustes → Ingreso con
+   Microsoft**, y define ahí los dominios de correo admitidos.
+
+**Detrás de Nginx, comprueba que llega `X-Forwarded-Proto`.** El portal construye la
+dirección de retorno con el esquema real del visitante; si el proxy no lo informa, la
+construye como `http`, no coincide con la registrada y Microsoft responde `AADSTS50011`.
+CloudPanel lo envía por defecto; si tocaste el vhost, asegúrate de conservar:
+
+```nginx
+proxy_set_header X-Forwarded-Proto $scheme;
+```
+
+Sobre el alta de cuentas: de fábrica **solo entran las personas que ya existen en el
+portal**; a las demás se les dice que pidan el alta. Puedes encender el alta automática en
+Ajustes, con el rol y los dominios acotados, pero piénsalo: que el ingreso sea cómodo no
+debería significar que cualquiera con correo del dominio se cree una cuenta sin que nadie
+lo mire.
+
+---
 ## 11. Verificación final
 
 ```bash

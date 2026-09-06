@@ -11,6 +11,7 @@ require_once __DIR__ . '/../../includes/phidias.php';
 require_once __DIR__ . '/../../includes/pagos_api.php';
 require_once __DIR__ . '/../../includes/adjuntos.php';
 require_once __DIR__ . '/../../includes/ia.php';
+require_once __DIR__ . '/../../includes/sso.php';
 
 $u = exigir_rol('admin');
 
@@ -75,6 +76,20 @@ if (es_post()) {
         }
         auditar('almacenamiento_configurado');
         flash_ok('Almacenamiento de adjuntos guardado.');
+        redirigir('portal/admin/ajustes.php');
+    }
+
+    if ($accion === 'microsoft') {
+        guardar_ajuste('entra_cliente',  post('entra_cliente'));
+        guardar_ajuste('entra_tenant',   post('entra_tenant'));
+        guardar_ajuste('entra_dominios', post('entra_dominios'));
+        guardar_ajuste('entra_alta',     isset($_POST['entra_alta']) ? '1' : '0');
+        guardar_ajuste('entra_rol',      array_key_exists(post('entra_rol'), ROLES) && post('entra_rol') !== 'admin'
+                                         ? post('entra_rol') : 'estudiante');
+        // El secreto solo se reemplaza si se escribe uno nuevo.
+        if (post('entra_secreto') !== '') guardar_ajuste('entra_secreto', post('entra_secreto'));
+        auditar('sso_configurado');
+        flash_ok('Ingreso con Microsoft guardado.');
         redirigir('portal/admin/ajustes.php');
     }
 
@@ -301,6 +316,69 @@ cabecera('Ajustes', [
       <p class="txt-sm txt-muted mt-2 mb-0">
         La importación de cursos y estudiantes se hace desde
         <a href="<?= url('portal/docente/importar.php') ?>">Importar de Phidias</a>.
+      </p>
+    </form>
+
+    <form method="post" class="panel">
+      <?= csrf_campo() ?>
+      <input type="hidden" name="accion" value="microsoft">
+      <div class="panel-h">
+        <h3>Ingreso con Microsoft</h3>
+        <?= sso_configurado() ? '<span class="chip chip-verde">Activo</span>'
+                              : '<span class="chip chip-gris">Sin configurar</span>' ?>
+      </div>
+
+      <p class="campo-label">Dirección de retorno</p>
+      <p class="txt-sm mb-2">
+        <code class="mono copiar" data-copiar="<?= h(sso_url_retorno()) ?>"
+              style="display:block;padding:.5rem .7rem;border:1px solid var(--border);border-radius:8px;background:var(--bg-alt);word-break:break-all"><?= h(sso_url_retorno()) ?></code>
+        <span class="pista">Pégala en Azure → tu aplicación → <strong>Authentication</strong> → Redirect URIs,
+          como plataforma <strong>Web</strong>. Debe coincidir carácter por carácter.</span>
+      </p>
+
+      <div class="campo-fila">
+        <div class="campo">
+          <label for="entra_cliente">Application (client) ID</label>
+          <input type="text" id="entra_cliente" name="entra_cliente" value="<?= h(sso_cliente()) ?>"
+                 placeholder="00000000-0000-0000-0000-000000000000">
+        </div>
+        <div class="campo">
+          <label for="entra_tenant">Directory (tenant) ID</label>
+          <input type="text" id="entra_tenant" name="entra_tenant" value="<?= h(sso_tenant()) ?>"
+                 placeholder="00000000-0000-0000-0000-000000000000">
+        </div>
+      </div>
+      <div class="campo">
+        <label for="entra_secreto">Client secret</label>
+        <input type="password" id="entra_secreto" name="entra_secreto" autocomplete="off"
+               placeholder="<?= sso_secreto() !== '' ? 'Guardado (' . h(sso_pista(sso_secreto())) . '). Escribe uno nuevo para reemplazarlo.' : 'El valor del secreto, no su Id' ?>">
+        <span class="pista">Azure → Certificates &amp; secrets → New client secret. Se copia el
+          <strong>Value</strong>, no el <em>Secret ID</em>, y solo se ve una vez. Caduca: anota la fecha.</span>
+      </div>
+      <div class="campo">
+        <label for="entra_dominios">Dominios de correo admitidos</label>
+        <input type="text" id="entra_dominios" name="entra_dominios" value="<?= h(implode(', ', sso_dominios())) ?>"
+               placeholder="colegioaleman.edu.co, estudiantes.colegioaleman.edu.co">
+        <span class="pista">Separados por comas. Vacío admite cualquier cuenta del inquilino.</span>
+      </div>
+      <label class="check">
+        <input type="checkbox" name="entra_alta" value="1" <?= sso_alta_automatica() ? 'checked' : '' ?>>
+        <span>Crear la cuenta la primera vez que alguien entre</span>
+      </label>
+      <div class="campo">
+        <label for="entra_rol">Rol de las cuentas creadas así</label>
+        <select id="entra_rol" name="entra_rol">
+          <?php foreach (ROLES as $k => $v): if ($k === 'admin') continue; ?>
+            <option value="<?= $k ?>" <?= sso_rol_alta() === $k ? 'selected' : '' ?>><?= $v ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <button class="btn" type="submit">Guardar</button>
+      <p class="txt-sm txt-muted mt-2 mb-0">
+        Con el alta automática apagada —como está de fábrica— solo entran las cuentas que ya
+        existen en el portal; a las demás se les dice que pidan el alta. Es lo prudente en un
+        colegio: que el ingreso sea cómodo no debería significar que cualquiera con correo del
+        dominio se cree una cuenta sin que nadie lo mire.
       </p>
     </form>
 

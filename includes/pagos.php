@@ -52,7 +52,7 @@ function mp_pista(string $valor): string {
 /** URL pública que hay que registrar en Mercado Pago como webhook. */
 function mp_url_webhook(): string {
     $host = $_SERVER['HTTP_HOST'] ?? 'www.vcodepro.de';
-    $esquema = !empty($_SERVER['HTTPS']) ? 'https' : 'http';
+    $esquema = esquema_publico();
     return $esquema . '://' . $host . url('portal/api/mercadopago.php');
 }
 

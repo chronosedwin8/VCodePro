@@ -60,6 +60,29 @@ function redirigir(string $ruta, int $codigo = 302): never {
     exit;
 }
 
+/**
+ * Esquema real con el que el visitante llegó al sitio.
+ *
+ * Detrás de Nginx o de CloudPanel, PHP recibe la petición por HTTP y
+ * $_SERVER['HTTPS'] viene vacío aunque el navegador esté en HTTPS. Quien sabe
+ * la verdad es la cabecera X-Forwarded-Proto que pone el proxy. Importa para
+ * cualquier dirección que se le entregue a un tercero —la de retorno de
+ * Microsoft, la del webhook de la pasarela—: si la construimos como http, no
+ * coincide con la registrada y la integración falla.
+ */
+function esquema_publico(): string {
+    $reenviado = $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '';
+    if ($reenviado !== '') {
+        // Puede llegar encadenado: "https, http".
+        $primero = trim(explode(',', $reenviado)[0]);
+        if ($primero !== '') return strtolower($primero) === 'https' ? 'https' : 'http';
+    }
+    if (($_SERVER['HTTP_X_FORWARDED_SSL'] ?? '') === 'on') return 'https';
+    if ((int) ($_SERVER['SERVER_PORT'] ?? 0) === 443) return 'https';
+    $https = $_SERVER['HTTPS'] ?? '';
+    return $https !== '' && strtolower((string) $https) !== 'off' ? 'https' : 'http';
+}
+
 function url_actual(): string {
     return $_SERVER['REQUEST_URI'] ?? url('portal/');
 }

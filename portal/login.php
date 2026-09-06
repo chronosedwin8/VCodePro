@@ -6,6 +6,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/layout.php';
+require_once __DIR__ . '/../includes/sso.php';
 
 iniciar_sesion();
 if (usuario()) redirigir(panel_de(rol()));
@@ -69,6 +70,20 @@ cabecera('Iniciar sesión', ['publica' => true]);
       </label>
       <button class="btn btn-block btn-lg" type="submit">Entrar</button>
     </form>
+
+    <?php if (sso_configurado()): ?>
+      <div class="auth-o"><span>o</span></div>
+      <a class="btn btn-block btn-ms" href="<?= url('portal/sso.php') ?>">
+        <svg viewBox="0 0 23 23" width="17" height="17" aria-hidden="true" focusable="false">
+          <path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#7fba00" d="M12 1h10v10H12z"/>
+          <path fill="#00a4ef" d="M1 12h10v10H1z"/><path fill="#ffb900" d="M12 12h10v10H12z"/>
+        </svg>
+        <span>Entrar con la cuenta del colegio</span>
+      </a>
+      <p class="txt-sm txt-muted" style="text-align:center;margin:.6rem 0 0">
+        Usa tu correo de Microsoft del colegio. No hace falta que recuerdes otra contraseña.
+      </p>
+    <?php endif; ?>
 
     <p class="auth-pie">
       <a href="<?= url('portal/recuperar.php') ?>">Olvidé mi contraseña</a> ·

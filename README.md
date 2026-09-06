@@ -245,6 +245,7 @@ vcodeproplus/
 │   ├── phidias.php                Cliente de la API de matrícula del colegio
 │   ├── richtext.php               Lista blanca del HTML que escriben los usuarios
 │   ├── s3.php                     Cliente de Amazon S3 (firma SigV4, sin SDK)
+│   ├── sso.php                    Ingreso con Microsoft (OpenID Connect)
 │   ├── ia.php                     Cliente de Gemini y permiso del asistente
 │   ├── ia_calificar.php           Calificación asistida de una entrega
 │   ├── adjuntos.php               Archivos que acompañan a una entrega
@@ -414,6 +415,11 @@ Se configura en Ajustes → Asistente de IA. Modelo por defecto: `gemini-3.8-fla
 ## Seguridad
 
 - Contraseñas con `password_hash` (bcrypt) y *rehash* automático al cambiar el algoritmo.
+- **Ingreso con Microsoft (Entra ID)** por OpenID Connect con código de autorización y
+  PKCE. Del `id_token` se verifica la firma contra el JWKS del inquilino, el emisor, la
+  audiencia, la ventana temporal y el `nonce`; `state` y `nonce` viajan en la sesión, no
+  en la URL. Por defecto **no se crean cuentas solas**: solo entra quien ya está en el
+  portal, y el alta automática es un ajuste con dominio y rol acotados.
 - Token **CSRF** en todos los formularios de escritura.
 - Bloqueo temporal tras seis intentos fallidos.
 - Sesión regenerada al entrar; cookies `HttpOnly`, `SameSite=Lax` y `Secure` bajo HTTPS.

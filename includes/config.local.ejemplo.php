@@ -58,3 +58,19 @@ putenv('VCP_ENV=produccion');
 // La clave se saca de https://aistudio.google.com/apikey
 // define('IA_CLAVE',  'AIza…');
 // define('IA_MODELO', 'gemini-3.8-flash');
+
+// ------------------------- Ingreso con Microsoft (Entra ID) — opcional ----
+// Permite entrar con la cuenta institucional. Los dos identificadores están
+// en Azure → App registrations → tu aplicación → Overview.
+//
+// El secreto se crea en Certificates & secrets → New client secret: se copia
+// el **Value** (no el Secret ID) y solo se ve una vez. Caduca, así que anota
+// la fecha y renuévalo antes.
+//
+// La dirección de retorno que hay que registrar en Azure (Authentication →
+// Redirect URIs, plataforma Web) la muestra el propio portal en
+// Ajustes → Ingreso con Microsoft.
+// define('ENTRA_CLIENTE', '00000000-0000-0000-0000-000000000000');
+// define('ENTRA_TENANT',  '00000000-0000-0000-0000-000000000000');
+// define('ENTRA_SECRETO', '…');
+// define('ENTRA_DOMINIOS', 'colegioaleman.edu.co, estudiantes.colegioaleman.edu.co');

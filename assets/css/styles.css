@@ -653,3 +653,17 @@ legend { font-weight: 700; padding: 0 8px; color: var(--text-strong); }
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
   .reveal { opacity: 1; transform: none; }
 }
+
+/* ---------- Ingreso con Microsoft ---------- */
+/* Separador entre la contraseña de siempre y el acceso institucional. */
+.auth-o { display: flex; align-items: center; gap: 12px; margin: 1.1rem 0 .9rem; }
+.auth-o::before, .auth-o::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.auth-o span { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+
+.btn-ms {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: var(--bg-elev); color: var(--text-strong);
+  border: 1px solid var(--border); font-weight: 600;
+}
+.btn-ms:hover { background: var(--bg-alt); border-color: var(--muted); text-decoration: none; }
+.btn-ms svg { flex: none; }

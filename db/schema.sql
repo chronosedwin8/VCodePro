@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   codigo_externo  VARCHAR(40)  DEFAULT NULL,
   origen          VARCHAR(20)  NOT NULL DEFAULT 'local',
   ia_habilitada   TINYINT(1)   NOT NULL DEFAULT 0,
+  entra_oid       VARCHAR(64)  DEFAULT NULL,
   ultimo_acceso   DATETIME     DEFAULT NULL,
   intentos        TINYINT UNSIGNED NOT NULL DEFAULT 0,
   bloqueado_hasta DATETIME     DEFAULT NULL,

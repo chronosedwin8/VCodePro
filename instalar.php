@@ -105,6 +105,8 @@ try {
         ['pagos',    'preferencia_id',  "VARCHAR(60) DEFAULT NULL AFTER pago_externo"],
         // Asistente de IA: permiso por docente y trazabilidad de lo que propone.
         ['usuarios',       'ia_habilitada',   "TINYINT(1) NOT NULL DEFAULT 0 AFTER origen"],
+        // Identificador de la cuenta en Entra ID, para el ingreso con Microsoft.
+        ['usuarios',       'entra_oid',       "VARCHAR(64) DEFAULT NULL AFTER ia_habilitada"],
         ['calificaciones', 'origen',          "ENUM('docente','ia') NOT NULL DEFAULT 'docente' AFTER comentario"],
         ['entregas',       'ia_calificada_en', "DATETIME DEFAULT NULL AFTER nota_letra"],
     ];
@@ -117,6 +119,14 @@ try {
             $pdo->exec("ALTER TABLE `$tabla` ADD COLUMN `$columna` $definicion");
             $agregadas++;
         }
+    }
+    $idxEntra = valor('SELECT COUNT(*) FROM information_schema.STATISTICS
+                        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = "usuarios" AND INDEX_NAME = "uq_usuarios_entra"',
+                      [DB_NOMBRE], 0);
+    if (!$idxEntra) {
+        // Único: una cuenta de Microsoft no puede apuntar a dos usuarios del portal.
+        $pdo->exec('ALTER TABLE usuarios ADD UNIQUE INDEX uq_usuarios_entra (entra_oid)');
+        $agregadas++;
     }
     $idxExterno = valor('SELECT COUNT(*) FROM information_schema.STATISTICS
                           WHERE TABLE_SCHEMA = ? AND TABLE_NAME = "usuarios" AND INDEX_NAME = "idx_usuarios_externo"',

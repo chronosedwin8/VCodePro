@@ -81,9 +81,14 @@ function borrar(string $tabla, string $donde, array $params = []): int {
 }
 
 /** Lee un ajuste del sistema. */
-function ajuste(string $clave, $porDefecto = null) {
+/**
+ * Todos los ajustes, leídos una sola vez por petición.
+ * Con $recargar se vuelve a consultar: lo usa guardar_ajuste() para que el
+ * resto de la petición vea el valor nuevo y no el que había al empezar.
+ */
+function ajustes_todos(bool $recargar = false): array {
     static $cache = null;
-    if ($cache === null) {
+    if ($cache === null || $recargar) {
         $cache = [];
         try {
             foreach (filas('SELECT clave, valor FROM ajustes') as $r) {
@@ -91,9 +96,14 @@ function ajuste(string $clave, $porDefecto = null) {
             }
         } catch (Throwable $e) { $cache = []; }
     }
-    return $cache[$clave] ?? $porDefecto;
+    return $cache;
+}
+
+function ajuste(string $clave, $porDefecto = null) {
+    return ajustes_todos()[$clave] ?? $porDefecto;
 }
 
 function guardar_ajuste(string $clave, string $valor): void {
     q('INSERT INTO ajustes (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = VALUES(valor)', [$clave, $valor]);
+    ajustes_todos(true);
 }
