@@ -6,6 +6,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/layout.php';
+require_once __DIR__ . '/../../includes/ia.php';
 require_once __DIR__ . '/../../includes/academico.php';
 
 $u = exigir_rol('admin');
@@ -56,6 +57,19 @@ if (es_post()) {
         actualizar('usuarios', ['estado' => post('valor')], 'id = :id', ['id' => $id]);
         auditar('usuario_estado', 'usuarios', $id, post('valor'));
         flash_ok('Estado actualizado.');
+    }
+
+    // El asistente de IA se concede docente por docente y se puede retirar.
+    if ($accion === 'ia' && $id) {
+        $x = fila('SELECT rol, ia_habilitada, email FROM usuarios WHERE id = ?', [$id]);
+        if ($x && $x['rol'] === 'docente') {
+            $nuevo = empty($x['ia_habilitada']) ? 1 : 0;
+            actualizar('usuarios', ['ia_habilitada' => $nuevo], 'id = :id', ['id' => $id]);
+            auditar('usuario_ia', 'usuarios', $id, ($nuevo ? 'habilitado' : 'retirado') . ' · ' . $x['email']);
+            flash_ok($nuevo ? 'Asistente de IA habilitado para ' . $x['email'] . '.'
+                            : 'Asistente de IA retirado a ' . $x['email'] . '.');
+        }
+        redirigir('portal/admin/usuarios.php');
     }
 
     if ($accion === 'clave' && $id) {
@@ -146,6 +160,9 @@ cabecera('Usuarios', [
               <?php elseif ($x['rol'] === 'docente' && (int) $x['grupos_doc']): ?>
                 <span class="chip chip-gris"><?= (int) $x['grupos_doc'] ?> grupo(s)</span>
               <?php endif; ?>
+              <?php if ($x['rol'] === 'docente' && !empty($x['ia_habilitada'])): ?>
+                <span class="chip chip-azul">IA</span>
+              <?php endif; ?>
             </td>
             <td><?= h(ROLES[$x['rol']]) ?></td>
             <td class="txt-sm txt-muted"><?= h($x['colegio'] ?? '—') ?></td>
@@ -163,6 +180,12 @@ cabecera('Usuarios', [
                           data-confirmar="¿Suspender esta cuenta?">Suspender</button>
                 <?php else: ?>
                   <button class="btn btn-xs btn-ghost" name="accion" value="estado" onclick="this.form.valor.value='activo'">Reactivar</button>
+                <?php endif; ?>
+                <?php if ($x['rol'] === 'docente'): ?>
+                  <button class="btn btn-xs <?= empty($x['ia_habilitada']) ? 'btn-ghost' : 'btn-ok' ?>" name="accion" value="ia"
+                          data-confirmar="<?= empty($x['ia_habilitada']) ? 'Este docente podrá calificar con IA y redactar actividades con ella. ¿Habilitar?' : '¿Retirar el asistente de IA a este docente?' ?>">
+                    <?= empty($x['ia_habilitada']) ? 'Dar IA' : 'Quitar IA' ?>
+                  </button>
                 <?php endif; ?>
                 <button class="btn btn-xs btn-ghost" name="accion" value="clave" data-confirmar="¿Generar una contraseña temporal?">Clave</button>
                 <button class="btn btn-xs btn-err" name="accion" value="eliminar"

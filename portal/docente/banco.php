@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/academico.php';
+require_once __DIR__ . '/../../includes/ia.php';
 
 $u = exigir_rol('docente', 'admin');
 
@@ -106,6 +107,9 @@ cabecera('Banco de actividades', [
   </select>
   <button class="btn btn-sm" type="submit">Filtrar</button>
   <a class="btn btn-ghost btn-sm" href="<?= url('portal/docente/banco.php') ?>">Limpiar</a>
+  <?php if (ia_permitida($u)): ?>
+    <a class="btn btn-sm" style="margin-left:auto" href="<?= url('portal/docente/actividad_nueva.php') ?>">Crear actividad con IA</a>
+  <?php endif; ?>
 </form>
 
 <?php if (!$actividades): ?>

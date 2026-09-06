@@ -10,6 +10,7 @@ require_once __DIR__ . '/../../includes/academico.php';
 require_once __DIR__ . '/../../includes/phidias.php';
 require_once __DIR__ . '/../../includes/pagos_api.php';
 require_once __DIR__ . '/../../includes/adjuntos.php';
+require_once __DIR__ . '/../../includes/ia.php';
 
 $u = exigir_rol('admin');
 
@@ -74,6 +75,20 @@ if (es_post()) {
         }
         auditar('almacenamiento_configurado');
         flash_ok('Almacenamiento de adjuntos guardado.');
+        redirigir('portal/admin/ajustes.php');
+    }
+
+    if ($accion === 'asistente') {
+        guardar_ajuste('ia_modelo', array_key_exists(post('ia_modelo'), IA_MODELOS) ? post('ia_modelo') : IA_MODELO_POR_DEFECTO);
+        if (post('ia_clave') !== '') guardar_ajuste('ia_clave', post('ia_clave'));
+        auditar('ia_configurada');
+        flash_ok('Asistente de IA guardado.');
+        redirigir('portal/admin/ajustes.php');
+    }
+
+    if ($accion === 'asistente_probar') {
+        [$ok, $msg] = ia_probar();
+        $ok ? flash_ok($msg) : flash_err($msg);
         redirigir('portal/admin/ajustes.php');
     }
 
@@ -286,6 +301,43 @@ cabecera('Ajustes', [
       <p class="txt-sm txt-muted mt-2 mb-0">
         La importación de cursos y estudiantes se hace desde
         <a href="<?= url('portal/docente/importar.php') ?>">Importar de Phidias</a>.
+      </p>
+    </form>
+
+    <form method="post" class="panel">
+      <?= csrf_campo() ?>
+      <input type="hidden" name="accion" value="asistente">
+      <div class="panel-h">
+        <h3>Asistente de IA</h3>
+        <?= ia_configurada() ? '<span class="chip chip-verde">Configurado</span>'
+                             : '<span class="chip chip-gris">Sin clave</span>' ?>
+      </div>
+      <div class="campo">
+        <label for="ia_clave">Clave de la API de Google</label>
+        <input type="password" id="ia_clave" name="ia_clave" autocomplete="off"
+               placeholder="<?= ia_clave() !== '' ? 'Guardada (' . h(ia_pista(ia_clave())) . '). Escribe una nueva para reemplazarla.' : 'AIza…' ?>">
+        <span class="pista">Se saca de <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.
+          Si prefieres dejarla fuera del portal, defínela en <code>includes/config.local.php</code>: esa constante tiene prioridad.</span>
+      </div>
+      <div class="campo">
+        <label for="ia_modelo">Modelo</label>
+        <select id="ia_modelo" name="ia_modelo">
+          <?php foreach (IA_MODELOS as $k => $v): ?>
+            <option value="<?= h($k) ?>" <?= ia_modelo() === $k ? 'selected' : '' ?>><?= h($k) ?> — <?= h($v) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="btn-fila">
+        <button class="btn" type="submit">Guardar</button>
+        <button class="btn btn-ghost" name="accion" value="asistente_probar">Probar conexión</button>
+      </div>
+      <?php $consumo = ia_consumo_mes(); ?>
+      <p class="txt-sm txt-muted mt-2 mb-0">
+        Este mes: <strong><?= (int) ($consumo['llamadas'] ?? 0) ?></strong> llamadas ·
+        <strong><?= number_format((float) ($consumo['tokens'] ?? 0), 0, ',', '.') ?></strong> tokens
+        <?= (int) ($consumo['fallos'] ?? 0) ? ' · ' . (int) $consumo['fallos'] . ' con error' : '' ?>.
+        El permiso se concede docente por docente en
+        <a href="<?= url('portal/admin/usuarios.php') ?>">Usuarios</a>; tener la clave no basta.
       </p>
     </form>
 

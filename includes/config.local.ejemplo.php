@@ -46,3 +46,15 @@ putenv('VCP_ENV=produccion');
 // define('S3_LLAVE',   'AKIA…');
 // define('S3_SECRETO', '…');
 // define('S3_PREFIJO', 'vcodepro');   // carpeta dentro del bucket
+
+// ----------------------------------- Asistente de IA (Google) — opcional --
+// Calificación asistida de entregas y redacción de actividades.
+//
+// Tener la clave NO habilita a nadie: el permiso se concede docente por
+// docente desde Usuarios, en el panel de administración. Las notas que
+// propone quedan marcadas como propuesta y no las ve el estudiante hasta que
+// el docente las publica.
+//
+// La clave se saca de https://aistudio.google.com/apikey
+// define('IA_CLAVE',  'AIza…');
+// define('IA_MODELO', 'gemini-3.8-flash');

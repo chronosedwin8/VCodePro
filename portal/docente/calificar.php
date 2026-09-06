@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/academico.php';
+require_once __DIR__ . '/../../includes/ia.php';
 
 $u = exigir_rol('docente', 'admin');
 $mio = es('admin') ? '1=1' : 'a.docente_id = ' . (int) $u['id'];
@@ -42,6 +43,16 @@ cabecera('Por calificar', [
     'migas'  => [['Panel', 'portal/docente/index.php'], ['Por calificar']],
 ]);
 ?>
+<?php if (ia_permitida($u) && $lista): ?>
+  <div class="aviso aviso-info">
+    <div>
+      <strong>Puedes calificar un grupo entero con el asistente.</strong>
+      Entra en la asignación y usa «Calificar el grupo con IA»: propone puntajes y comentarios
+      para todos los estudiantes de una vez, y tú revisas antes de publicar.
+      <a href="<?= url('portal/docente/asignaciones.php') ?>">Ver mis asignaciones</a>.
+    </div>
+  </div>
+<?php endif; ?>
 <form class="acciones-barra" method="get">
   <select name="estado">
     <?php foreach (['entregada' => 'Esperando calificación', 'rehacer' => 'Devueltas para rehacer', 'revisada' => 'Ya calificadas', 'en_progreso' => 'En progreso'] as $k => $v): ?>

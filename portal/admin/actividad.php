@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/academico.php';
+require_once __DIR__ . '/../../includes/ia.php';
 
 $u = exigir_rol('admin');
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
@@ -177,6 +178,23 @@ cabecera($a ? 'Editar actividad' : 'Nueva actividad', [
         : '',
 ]);
 ?>
+<?php if (!$a && ia_permitida($u)): ?>
+  <div class="panel">
+    <div class="panel-h"><h2>Redactar con el asistente</h2><span class="ia-marca">IA</span></div>
+    <div class="campo">
+      <label for="tema">¿De qué quieres que trate?</label>
+      <input type="text" id="tema" data-ia-tema
+             placeholder="Ej.: un semáforo con micro:bit que mida el tiempo de cruce de la calle del colegio">
+      <span class="pista">Rellena el formulario de abajo con un borrador completo. Revísalo antes de guardar.</span>
+    </div>
+    <div class="form-acc">
+      <button class="btn" type="button" data-ia-redactar
+              data-url="<?= url('portal/api/ia_actividad.php') ?>"
+              data-csrf="<?= h(csrf_token()) ?>">Redactar borrador</button>
+      <span class="pista" data-ia-redaccion-estado role="status"></span>
+    </div>
+  </div>
+<?php endif; ?>
 <form method="post" class="panel" data-avisar>
   <?= csrf_campo() ?>
   <input type="hidden" name="accion" value="guardar">
@@ -189,7 +207,7 @@ cabecera($a ? 'Editar actividad' : 'Nueva actividad', [
     </div>
     <div class="campo">
       <label for="nivel_id">Nivel</label>
-      <select id="nivel_id" name="nivel_id" required>
+      <select id="nivel_id" name="nivel_id" data-ia-nivel required>
         <?php foreach ($niveles as $n): ?>
           <option value="<?= (int) $n['id'] ?>" <?= (int) ($a['nivel_id'] ?? 0) === (int) $n['id'] ? 'selected' : '' ?>>
             <?= h($n['grado'] . ' · ' . $n['nombre']) ?>

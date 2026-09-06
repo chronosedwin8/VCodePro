@@ -245,6 +245,8 @@ vcodeproplus/
 │   ├── phidias.php                Cliente de la API de matrícula del colegio
 │   ├── richtext.php               Lista blanca del HTML que escriben los usuarios
 │   ├── s3.php                     Cliente de Amazon S3 (firma SigV4, sin SDK)
+│   ├── ia.php                     Cliente de Gemini y permiso del asistente
+│   ├── ia_calificar.php           Calificación asistida de una entrega
 │   ├── adjuntos.php               Archivos que acompañan a una entrega
 │   └── layout.php                 Cabecera, menú por rol y pie del portal
 ├── portal/
@@ -256,7 +258,7 @@ vcodeproplus/
 │   ├── cliente/                   Licencias, puestos, facturas, soporte, descargas
 │   └── api/                       Guardado por fases, tema y formulario de contacto
 ├── db/
-│   ├── schema.sql                 31 tablas InnoDB utf8mb4
+│   ├── schema.sql                 32 tablas InnoDB utf8mb4
 │   └── seed/                      Niveles, rúbricas base y los cuatro bancos de actividades
 └── assets/
     ├── css/styles.css             Sistema de diseño del sitio
@@ -264,6 +266,7 @@ vcodeproplus/
     ├── js/portal.js               Tema, menú, autoguardado, filtros
     ├── js/editor.js               Editor enriquecido sobre los textarea del portal
     ├── js/adjuntos.js             Subida de archivos sin recargar la página
+    ├── js/ia.js                   Calificación de un grupo y redacción de actividades
     └── uploads/                   Entregas y avatares (fuera del control de versiones)
 ```
 
@@ -359,6 +362,40 @@ Los archivos se guardan en **Amazon S3** si está configurado y, si no, en el di
 servidor; el portal funciona igual en los dos casos. Ver `includes/s3.php`, que firma las
 peticiones con SigV4 a mano —el proyecto no usa Composer— y `includes/adjuntos.php`.
 
+### Asistente de IA para el docente
+
+Un docente habilitado puede pedirle al asistente que califique **todas las entregas de un
+grupo desde un botón**, o **una sola entrega** desde la pantalla de calificación. El
+asistente lee la actividad, su rúbrica con los descriptores, las indicaciones que dio el
+docente, lo que el estudiante escribió en cada fase, su descripción de la solución, la
+declaración de uso de IA y los adjuntos de texto y código. Devuelve un puntaje y un
+comentario por criterio, más una retroalimentación general.
+
+**Lo que devuelve es una propuesta, no una nota.** Se guarda con `origen = 'ia'`, la
+retroalimentación entra como comentario privado y la entrega no cambia de estado: el
+estudiante no ve nada. El docente revisa —criterio por criterio si quiere— y publica. Al
+guardar, la calificación pasa a `origen = 'docente'`: es su firma la que va en el boletín.
+En el IB la responsabilidad de la evaluación es del docente, y el registro deja constancia
+de qué propuso la máquina y quién lo confirmó.
+
+También redacta el borrador de una **actividad nueva**: el docente escribe de qué quiere
+que trate y el asistente devuelve título, descripción, pregunta de indagación, contexto
+global, objetivos, entregables y las cuatro fases del ciclo de diseño, listas para revisar
+y ajustar. Las actividades que crea un docente nacen sin publicar, a su nombre, hasta que
+la coordinación las revisa.
+
+Salvaguardas que conviene no quitar:
+- **El permiso es individual.** Tener la clave configurada no habilita a nadie: la
+  administración lo concede y lo retira docente por docente en Usuarios.
+- Los puntajes se **recortan al máximo de cada criterio** antes de guardarse, y los
+  criterios que el modelo se invente se descartan.
+- La respuesta se pide como **JSON con esquema**: no se interpreta prosa para sacar un número.
+- Cada llamada queda en `ia_registros` con usuario, tokens y latencia, para el control de
+  gasto y para saber quién pidió qué.
+
+Se configura en Ajustes → Asistente de IA. Modelo por defecto: `gemini-3.8-flash`
+(unos 7 segundos por entrega; un grupo de 30 tarda unos 4 minutos).
+
 ### Probidad académica e IA
 
 - Cada entrega incluye una **declaración de uso de IA** que el docente ve al calificar.
@@ -390,6 +427,9 @@ peticiones con SigV4 a mano —el proyecto no usa Composer— y `includes/adjunt
   `svg` y compañía se eliminan enteras. Sin esto, un estudiante podría guardar un script
   que se ejecutaría en la sesión del docente que califica.
 - Subidas restringidas por extensión y tamaño, con nombre aleatorio y ejecución deshabilitada.
+- Las calificaciones que propone la IA no llegan al estudiante: las notas solo se ven
+  cuando el docente devuelve el trabajo, y la retroalimentación del asistente entra como
+  comentario privado hasta que él la publica.
 - Los adjuntos viven en un bucket de S3 **privado**. El portal nunca publica su dirección:
   comprueba primero quién pide qué —solo el dueño de la entrega, su docente y la
   administración— y luego redirige a un enlace firmado que caduca en cinco minutos. Lo que

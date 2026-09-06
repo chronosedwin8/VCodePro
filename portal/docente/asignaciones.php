@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/academico.php';
+require_once __DIR__ . '/../../includes/ia.php';
 
 $u = exigir_rol('docente', 'admin');
 $id = get_int('id');
@@ -94,7 +95,12 @@ if ($id) {
       <div class="panel panel-plano">
         <div class="panel-h">
           <h2>Estado por estudiante</h2>
-          <input type="search" data-filtra="#tabla-entregas" placeholder="Filtrar" style="max-width:220px">
+          <div class="btn-fila">
+            <?php if (ia_permitida($u)): ?>
+              <a class="btn btn-sm" href="<?= url('portal/docente/ia_calificar.php?asignacion=' . (int) $a['id']) ?>">Calificar el grupo con IA</a>
+            <?php endif; ?>
+            <input type="search" data-filtra="#tabla-entregas" placeholder="Filtrar" style="max-width:220px">
+          </div>
         </div>
         <div class="tabla-caja">
           <table class="tabla" id="tabla-entregas">

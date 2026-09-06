@@ -327,6 +327,29 @@ Recuerda que el tamaño máximo real es el menor de tres números: `ADJUNTO_MAX_
 en 30 MB.
 
 ---
+## 10 quater. Asistente de IA
+
+Permite calificar un grupo entero desde un botón y redactar actividades. Es opcional: sin
+clave, el portal funciona igual y los botones no aparecen.
+
+1. Saca una clave en <https://aistudio.google.com/apikey>.
+2. Ponla en `includes/config.local.php` (`IA_CLAVE`) o en **Ajustes → Asistente de IA**.
+   La constante tiene prioridad sobre lo guardado en la base de datos.
+3. Pulsa **Probar conexión**. Debe responder «Conexión correcta con …».
+4. **Habilita a los docentes uno por uno** en **Usuarios**, con el botón *Dar IA*. Tener la
+   clave no habilita a nadie: es una decisión por persona y se puede retirar.
+
+Sobre el gasto: cada entrega calificada consume del orden de 3.000 a 8.000 tokens según lo
+que haya escrito el estudiante, y unos 7 segundos. Un grupo de 30 tarda unos 4 minutos. El
+panel de Ajustes muestra el consumo del mes; el detalle está en la tabla `ia_registros`.
+Conviene poner un límite de gasto en la consola de Google.
+
+Un aviso que conviene repetirle al equipo docente: **el asistente propone, el docente
+califica**. Las notas que genera quedan marcadas como propuesta y el estudiante no las ve
+hasta que un docente las revisa y las publica. Al publicarlas, la calificación pasa a estar
+firmada por esa persona. En el IB la responsabilidad de la evaluación no se delega.
+
+---
 ## 11. Verificación final
 
 ```bash

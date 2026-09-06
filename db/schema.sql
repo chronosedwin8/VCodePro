@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   tema            ENUM('light','dark') NOT NULL DEFAULT 'dark',
   codigo_externo  VARCHAR(40)  DEFAULT NULL,
   origen          VARCHAR(20)  NOT NULL DEFAULT 'local',
+  ia_habilitada   TINYINT(1)   NOT NULL DEFAULT 0,
   ultimo_acceso   DATETIME     DEFAULT NULL,
   intentos        TINYINT UNSIGNED NOT NULL DEFAULT 0,
   bloqueado_hasta DATETIME     DEFAULT NULL,
@@ -225,6 +226,7 @@ CREATE TABLE IF NOT EXISTS entregas (
   entregado_en  DATETIME DEFAULT NULL,
   nota_final    DECIMAL(5,2) DEFAULT NULL,
   nota_letra    VARCHAR(10) DEFAULT NULL,
+  ia_calificada_en DATETIME DEFAULT NULL,
   creado_en     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_entrega (asignacion_id, estudiante_id),
@@ -273,6 +275,7 @@ CREATE TABLE IF NOT EXISTS calificaciones (
   docente_id  INT UNSIGNED NOT NULL,
   puntaje     TINYINT UNSIGNED NOT NULL DEFAULT 0,
   comentario  TEXT,
+  origen      ENUM('docente','ia') NOT NULL DEFAULT 'docente',
   fecha       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_calif (entrega_id, criterio_id),
   CONSTRAINT fk_cal_ent FOREIGN KEY (entrega_id) REFERENCES entregas(id) ON DELETE CASCADE,
@@ -467,6 +470,25 @@ CREATE TABLE IF NOT EXISTS pagos_webhook (
   creado_en    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_pw_recurso (origen, recurso_id),
   INDEX idx_pw_fecha (creado_en)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Cada llamada al asistente de IA: quién, para qué, cuánto costó y si salió
+-- bien. Sirve para el control de gasto y para responder «¿quién pidió esto?»
+-- cuando una nota la propuso la máquina.
+CREATE TABLE IF NOT EXISTS ia_registros (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  usuario_id  INT UNSIGNED DEFAULT NULL,
+  accion      VARCHAR(40) NOT NULL,
+  entrega_id  INT UNSIGNED DEFAULT NULL,
+  modelo      VARCHAR(60) NOT NULL,
+  tokens      INT UNSIGNED NOT NULL DEFAULT 0,
+  ms          INT UNSIGNED NOT NULL DEFAULT 0,
+  ok          TINYINT(1) NOT NULL DEFAULT 1,
+  detalle     VARCHAR(400) DEFAULT NULL,
+  creado_en   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_ia_usuario (usuario_id),
+  INDEX idx_ia_fecha (creado_en),
+  CONSTRAINT fk_ia_u FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS mensajes_contacto (

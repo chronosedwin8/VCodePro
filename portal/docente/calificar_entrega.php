@@ -8,6 +8,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/academico.php';
 require_once __DIR__ . '/../../includes/adjuntos.php';
+require_once __DIR__ . '/../../includes/ia_calificar.php';
 
 $u = exigir_rol('docente', 'admin');
 $id = get_int('e');
@@ -33,6 +34,20 @@ if (es_post()) {
     exigir_csrf();
     $accion = post('accion');
 
+    // Propuesta del asistente para esta entrega. Rellena el formulario de
+    // abajo; no publica nada: el docente revisa y guarda con su firma.
+    if ($accion === 'ia') {
+        if (!ia_permitida($u)) {
+            flash_err('El asistente de IA no está habilitado para tu cuenta.');
+        } else {
+            [$okIA, $rIA] = ia_calificar_entrega($id, $u);
+            $okIA ? flash_ok('Propuesta lista: ' . $rIA['obtenido'] . ' de ' . $rIA['maximo']
+                           . ' puntos. Revísala criterio por criterio y guarda para publicarla.')
+                  : flash_err($rIA);
+        }
+        redirigir('portal/docente/calificar_entrega.php?e=' . $id);
+    }
+
     if (in_array($accion, ['calificar', 'devolver'], true)) {
         foreach ($act['rubrica'] as $c) {
             $campo = 'crit_' . (int) $c['id'];
@@ -43,12 +58,14 @@ if (es_post()) {
             if ($ex) {
                 actualizar('calificaciones', [
                     'puntaje' => $puntaje, 'comentario' => $comentario,
-                    'docente_id' => $u['id'], 'fecha' => date('Y-m-d H:i:s'),
+                    // Al guardar, el docente firma la nota: deja de ser propuesta.
+                    'docente_id' => $u['id'], 'origen' => 'docente', 'fecha' => date('Y-m-d H:i:s'),
                 ], 'id = :id', ['id' => $ex['id']]);
             } else {
                 insertar('calificaciones', [
                     'entrega_id' => $id, 'criterio_id' => (int) $c['id'],
                     'docente_id' => $u['id'], 'puntaje' => $puntaje, 'comentario' => $comentario,
+                    'origen' => 'docente',
                 ]);
             }
         }
@@ -113,6 +130,8 @@ foreach (filas('SELECT ef.*, af.id AS af_id, af.titulo, af.fase, af.entregable, 
     $fases[] = $f;
 }
 $adjuntos = adjuntos_por_fase($id);
+$retroIA  = ia_retro_de($id);
+$esPropuestaIA = $e['ia_calificada_en'] && $e['estado'] !== 'revisada';
 $califs = [];
 foreach (filas('SELECT * FROM calificaciones WHERE entrega_id = ?', [$id]) as $c) $califs[(int) $c['criterio_id']] = $c;
 
@@ -199,6 +218,22 @@ cabecera('Calificar', [
         <h2>Rúbrica</h2>
         <p>Total posible <?= array_sum(array_map(fn($c) => (int) $c['maximo'], $act['rubrica'])) ?> puntos</p>
       </div>
+      <?php if (ia_permitida($u) && !$esPropuestaIA && $e['estado'] !== 'revisada'): ?>
+        <p class="form-acc mb-2">
+          <button class="btn btn-ghost btn-sm" name="accion" value="ia" formnovalidate
+                  data-confirmar="El asistente leerá esta entrega y propondrá puntajes y comentarios. Podrás revisarlos antes de guardar. ¿Continuar?">
+            Proponer calificación con IA
+          </button>
+          <span class="pista">Tarda unos segundos. No publica nada: rellena este formulario para que lo revises.</span>
+        </p>
+      <?php elseif ($esPropuestaIA): ?>
+        <div class="aviso aviso-warn">
+          <div><span class="ia-marca">Propuesta de IA</span>
+            Los puntajes y comentarios de abajo los propuso el asistente el
+            <?= fecha($e['ia_calificada_en'], true) ?> y <strong>el estudiante todavía no los ve</strong>.
+            Revísalos y pulsa «Guardar calificación» para hacerlos tuyos y publicarlos.</div>
+        </div>
+      <?php endif; ?>
 
       <div class="rubrica">
         <?php foreach ($act['rubrica'] as $c):
@@ -232,7 +267,10 @@ cabecera('Calificar', [
       <div class="campo mt-2">
         <label for="retroalimentacion">Retroalimentación general</label>
         <textarea id="retroalimentacion" name="retroalimentacion" data-rico
-                  placeholder="Qué logró, qué debe mejorar y cuál es el siguiente paso concreto."></textarea>
+                  placeholder="Qué logró, qué debe mejorar y cuál es el siguiente paso concreto."><?= h($retroIA['mensaje'] ?? '') ?></textarea>
+        <?php if ($retroIA): ?>
+          <span class="pista">Este texto lo redactó el asistente y todavía no lo ha visto el estudiante. Ajústalo antes de guardar.</span>
+        <?php endif; ?>
       </div>
 
       <div class="form-acc">

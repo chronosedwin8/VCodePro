@@ -103,6 +103,10 @@ try {
         ['facturas', 'pasarela',        "VARCHAR(30) DEFAULT NULL AFTER referencia_pago"],
         ['facturas', 'pagada_en',       "DATETIME DEFAULT NULL AFTER pasarela"],
         ['pagos',    'preferencia_id',  "VARCHAR(60) DEFAULT NULL AFTER pago_externo"],
+        // Asistente de IA: permiso por docente y trazabilidad de lo que propone.
+        ['usuarios',       'ia_habilitada',   "TINYINT(1) NOT NULL DEFAULT 0 AFTER origen"],
+        ['calificaciones', 'origen',          "ENUM('docente','ia') NOT NULL DEFAULT 'docente' AFTER comentario"],
+        ['entregas',       'ia_calificada_en', "DATETIME DEFAULT NULL AFTER nota_letra"],
     ];
     $agregadas = 0;
     foreach ($columnas as [$tabla, $columna, $definicion]) {

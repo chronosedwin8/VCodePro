@@ -571,3 +571,30 @@ table.tabla .acc { text-align: right; white-space: nowrap; }
 .adj-estado { margin: .4rem 0 0; font-size: .8rem; color: var(--muted); min-height: 1em; }
 .adj-estado.es-ok { color: var(--ok); }
 .adj-estado.es-error { color: var(--err); }
+
+/* ---------- Asistente de IA ---------- */
+.ia-progreso {
+  height: 6px; margin: 0 0 12px; overflow: hidden;
+  background: var(--bg-alt); border: 1px solid var(--border); border-radius: 99px;
+}
+.ia-progreso i { display: block; height: 100%; width: 0; background: var(--brand); transition: width .25s; }
+
+tr.es-procesando { background: var(--info-soft); }
+tr.es-listo      { background: var(--ok-soft); }
+tr.es-fallo      { background: var(--err-soft); cursor: help; }
+
+.pista.es-ok    { color: var(--ok); }
+.pista.es-error { color: var(--err); }
+
+/* Distintivo de lo que propuso la máquina y todavía no ha firmado nadie. */
+.ia-marca {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: .15rem .45rem; font-size: .72rem; font-weight: 600;
+  color: var(--text-strong); background: var(--warn-soft);
+  border: 1px solid var(--border); border-radius: 99px;
+}
+.ia-caja {
+  padding: .7rem .85rem; margin-top: .6rem;
+  background: var(--bg-alt); border: 1px dashed var(--border); border-radius: var(--radius);
+}
+.ia-caja > h4 { margin: 0 0 .4rem; font-size: .86rem; color: var(--text-strong); }

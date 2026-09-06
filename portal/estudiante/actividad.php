@@ -110,9 +110,14 @@ $contenidoFases = [];
 foreach (filas('SELECT * FROM entrega_fases WHERE entrega_id = ?', [$entregaId]) as $f) {
     $contenidoFases[(int) $f['fase_id']] = $f;
 }
+// Las notas se ven cuando el docente devuelve el trabajo, no antes: una
+// calificación a medias —o la propuesta que el asistente de IA deja para
+// que el docente revise— no debe llegarle al estudiante.
 $calificaciones = [];
-foreach (filas('SELECT * FROM calificaciones WHERE entrega_id = ?', [$entregaId]) as $c) {
-    $calificaciones[(int) $c['criterio_id']] = $c;
+if (in_array($e['estado'], ['revisada', 'rehacer'], true)) {
+    foreach (filas('SELECT * FROM calificaciones WHERE entrega_id = ?', [$entregaId]) as $c) {
+        $calificaciones[(int) $c['criterio_id']] = $c;
+    }
 }
 $comentarios = filas('SELECT c.*, u.nombre, u.apellidos, u.rol FROM comentarios c
                         JOIN usuarios u ON u.id = c.autor_id
