@@ -162,7 +162,7 @@
     if (plan === "personal") {
       detalle = licencias + (licencias === 1 ? " licencia" : " licencias") + " x " +
         COP(PLANES.personal.mensualPorLicencia) + " al mes" +
-        (periodoActual === "anual" ? " x 10 meses facturados (12 meses de uso)" : "");
+        (periodoActual === "anual" ? " x " + PLANES.personal.mesesAnual + " meses facturados (12 meses de uso)" : "");
     } else {
       detalle = "Tarifa única para hasta " + datos.maxLicencias + " licencias" +
         (periodoActual === "anual" ? " durante 12 meses" : ", prorrateada al mes");
@@ -194,6 +194,23 @@
       }
     } else {
       filaAhorro.hidden = true;
+    }
+
+    // Lo calculado se compra tal cual: Personal lleva cantidad y periodo;
+    // Escuela y Sitio son tarifa única y se pagan con su periodicidad.
+    var botonComprar = $("#btn-comprar");
+    var notaCompra = $("#out-compra-nota");
+    if (botonComprar) {
+      botonComprar.href = "comprar.php?plan=" + plan +
+        (plan === "personal" ? "&licencias=" + licencias + "&periodo=" + periodoActual : "");
+      botonComprar.textContent = "Comprar " + datos.nombre + " en línea";
+    }
+    if (notaCompra) {
+      var prorrateado = plan !== "personal" && periodoActual === "mensual";
+      notaCompra.hidden = !prorrateado;
+      notaCompra.textContent = prorrateado
+        ? "El valor mensual es de referencia: el plan " + datos.nombre + " se paga por año (" + COP(datos.anual) + ")."
+        : "";
     }
 
     ultimoCalculo = {
@@ -276,6 +293,8 @@
     if (per) {
       PLANES.personal.nombre = per.nombre;
       PLANES.personal.mensualPorLicencia = per.precio / per.meses;
+      if (per.max_licencias) { PLANES.personal.maxLicencias = per.max_licencias; }
+      if (per.meses_cobrados_anual) { PLANES.personal.mesesAnual = per.meses_cobrados_anual; }
     }
     ["escuela", "sitio"].forEach(function (k) {
       var p = planes[k];

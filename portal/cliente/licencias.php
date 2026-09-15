@@ -19,7 +19,8 @@ if (es_post()) {
         if (!$l) {
             flash_err('Esa licencia no está en tu cuenta.');
         } else {
-            $f = factura_de_renovacion($l, (int) $u['id']);
+            $periodo = in_array(post('periodo'), ['mensual', 'anual'], true) ? post('periodo') : null;
+            $f = factura_de_renovacion($l, (int) $u['id'], $periodo);
             if ($f) {
                 flash_ok('Emitimos la factura ' . $f['numero'] . ' para la renovación.');
                 redirigir('portal/cliente/pagar.php?factura=' . (int) $f['id']);
@@ -103,7 +104,15 @@ cabecera('Licencias', [
                 <?= csrf_campo() ?>
                 <input type="hidden" name="accion" value="renovar">
                 <input type="hidden" name="licencia_id" value="<?= (int) $l['id'] ?>">
-                <button class="btn btn-sm" type="submit">Renovar y pagar</button>
+                <?php if ($l['plan'] === 'personal'):
+                    $porMes = plan_pedido('personal', (int) $l['cupo'], 'mensual');
+                    $porAnio = plan_pedido('personal', (int) $l['cupo'], 'anual'); ?>
+                  <button class="btn btn-sm" type="submit" name="periodo" value="mensual">Renovar 1 mes · <?= h(plan_pesos($porMes['monto'])) ?></button>
+                  <button class="btn btn-sm" type="submit" name="periodo" value="anual"
+                          title="12 meses por el precio de <?= PLAN_PERSONAL_MESES_ANUAL ?>">Renovar 12 meses · <?= h(plan_pesos($porAnio['monto'])) ?></button>
+                <?php else: ?>
+                  <button class="btn btn-sm" type="submit">Renovar y pagar</button>
+                <?php endif; ?>
               </form>
               <a class="btn btn-ghost btn-sm" href="<?= url('portal/cliente/soporte.php?asunto=' . urlencode('Renovación de la licencia ' . $l['clave'])) ?>">Prefiero hablar con ventas</a>
             <?php endif; ?>
@@ -131,11 +140,11 @@ cabecera('Licencias', [
       <div class="panel-h"><h3>Planes disponibles</h3></div>
       <table class="tabla tabla-mini">
         <tbody>
-          <?php foreach (plan_catalogo() as $pl): ?>
+          <?php foreach (plan_catalogo() as $k => $pl): ?>
             <tr>
               <td><?= h($pl['nombre']) ?></td>
-              <td class="num"><?= $pl['cupo'] === 1 ? '1 licencia' : 'hasta ' . (int) $pl['cupo'] ?></td>
-              <td class="num"><?= h(plan_pesos($pl['precio'])) ?>/<?= h(plan_periodo($pl)) ?></td>
+              <td class="num"><?= $k === 'personal' ? '1 a ' . PLAN_PERSONAL_MAX : 'hasta ' . (int) $pl['cupo'] ?></td>
+              <td class="num"><?= h(plan_pesos($pl['precio'])) ?>/<?= h(plan_periodo($pl)) ?><?= $k === 'personal' ? ' c/u' : '' ?></td>
             </tr>
           <?php endforeach; ?>
         </tbody>

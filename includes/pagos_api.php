@@ -530,15 +530,12 @@ function nuevo_numero_factura(): string {
  * con el precio vigente. Si ya hubo un intento, se respeta el valor con el que
  * el cliente empezó a pagar.
  */
-function factura_al_precio_vigente(array $f, array $cat, int $cupo, bool $renovacion): array {
+function factura_al_precio_vigente(array $f, array $pedido, bool $renovacion): array {
     $cambios = [];
-    if (!valor('SELECT id FROM pagos WHERE factura_id = ? LIMIT 1', [$f['id']])) {
-        if ((float) $f['monto'] !== (float) $cat['precio'] || (int) ($f['meses'] ?? 0) !== $cat['meses']) {
-            $cambios += [
-                'monto'    => $cat['precio'],
-                'meses'    => $cat['meses'],
-                'concepto' => plan_concepto($cat, $cupo, $renovacion),
-            ];
+    if (!factura_con_intentos((int) $f['id'])) {
+        $concepto = plan_concepto($pedido, $pedido['cupo'], $renovacion);
+        if ((float) $f['monto'] !== (float) $pedido['monto'] || (int) ($f['meses'] ?? 0) !== $pedido['meses'] || $f['concepto'] !== $concepto) {
+            $cambios += ['monto' => $pedido['monto'], 'meses' => $pedido['meses'], 'concepto' => $concepto];
         }
     }
     if ($f['estado'] === 'vencida') {
@@ -551,22 +548,37 @@ function factura_al_precio_vigente(array $f, array $cat, int $cupo, bool $renova
     return $f;
 }
 
+/** ¿Alguien empezó ya a pagar esta factura? Entonces su valor no se toca. */
+function factura_con_intentos(int $facturaId): bool {
+    return (bool) valor('SELECT id FROM pagos WHERE factura_id = ? LIMIT 1', [$facturaId]);
+}
+
 /**
  * Pedido de compra en línea: licencia suspendida hasta el pago y su factura.
- * Si el cliente ya tiene un pedido igual sin pagar de las últimas dos semanas,
- * lo reutiliza en vez de sembrar licencias y facturas duplicadas.
+ *
+ * Si el cliente ya tiene un pedido del mismo plan sin pagar de las últimas dos
+ * semanas, lo reutiliza en vez de sembrar licencias y facturas duplicadas. Si
+ * cambió la cantidad o el periodo y nadie ha empezado a pagarlo, lo ajusta; si
+ * ya hubo un intento de pago, lo respeta y emite un pedido nuevo.
  */
-function compra_crear(string $plan, int $clienteId, ?int $colegioId): array {
-    $catalogo = plan_catalogo();
-    if (!isset($catalogo[$plan])) $plan = 'escuela';
-    $cat = $catalogo[$plan];
+function compra_crear(string $plan, int $clienteId, ?int $colegioId, int $licencias = 1, string $periodo = 'mensual'): array {
+    $pedido = plan_pedido($plan, $licencias, $periodo);
+    $plan = $pedido['plan'];
 
-    $previa = fila('SELECT f.* FROM facturas f JOIN licencias l ON l.id = f.licencia_id
+    $previa = fila('SELECT f.*, l.cupo AS licencia_cupo FROM facturas f JOIN licencias l ON l.id = f.licencia_id
                      WHERE f.cliente_id = ? AND f.tipo = "compra" AND f.estado IN ("pendiente","vencida")
                        AND l.plan = ? AND l.estado = "suspendida" AND f.emitida_en >= ?
                   ORDER BY f.id DESC LIMIT 1', [$clienteId, $plan, date('Y-m-d', strtotime('-14 days'))]);
     if ($previa) {
-        return factura_al_precio_vigente($previa, $cat, $cat['cupo'], false);
+        $igual = (int) $previa['meses'] === $pedido['meses']
+              && ($plan !== 'personal' || (int) $previa['licencia_cupo'] === $pedido['cupo']);
+        if ($igual || !factura_con_intentos((int) $previa['id'])) {
+            if ((int) $previa['licencia_cupo'] !== $pedido['cupo']) {
+                actualizar('licencias', ['cupo' => $pedido['cupo']], 'id = :id', ['id' => $previa['licencia_id']]);
+            }
+            unset($previa['licencia_cupo']);
+            return factura_al_precio_vigente($previa, $pedido, false);
+        }
     }
 
     $licenciaId = insertar('licencias', [
@@ -574,10 +586,10 @@ function compra_crear(string $plan, int $clienteId, ?int $colegioId): array {
         'cliente_id' => $clienteId,
         'clave'      => generar_clave_licencia($plan),
         'plan'       => $plan,
-        'cupo'       => $cat['cupo'],
+        'cupo'       => $pedido['cupo'],
         // Provisional: al acreditarse el pago la vigencia se recalcula desde ese día.
         'emitida_en' => date('Y-m-d'),
-        'vence_en'   => date('Y-m-d', strtotime('+' . $cat['meses'] . ' months')),
+        'vence_en'   => date('Y-m-d', strtotime('+' . $pedido['meses'] . ' months')),
         'estado'     => 'suspendida',
         'notas'      => 'Compra en línea pendiente de pago.',
     ]);
@@ -586,40 +598,62 @@ function compra_crear(string $plan, int $clienteId, ?int $colegioId): array {
         'cliente_id'  => $clienteId,
         'licencia_id' => $licenciaId,
         'tipo'        => 'compra',
-        'meses'       => $cat['meses'],
+        'meses'       => $pedido['meses'],
         'numero'      => nuevo_numero_factura(),
-        'concepto'    => plan_concepto($cat, $cat['cupo']),
-        'monto'       => $cat['precio'],
+        'concepto'    => plan_concepto($pedido, $pedido['cupo']),
+        'monto'       => $pedido['monto'],
         'moneda'      => 'COP',
         'estado'      => 'pendiente',
         'emitida_en'  => date('Y-m-d'),
         'vence_en'    => date('Y-m-d', strtotime('+15 days')),
     ]);
-    auditar('compra_iniciada', 'facturas', $facturaId, $plan . ' · ' . plan_pesos($cat['precio']));
+    auditar('compra_iniciada', 'facturas', $facturaId, $plan . ' · ' . plan_puestos($pedido['cupo']) . ' · '
+        . $pedido['meses'] . ' mes(es) · ' . plan_pesos($pedido['monto']));
     return fila('SELECT * FROM facturas WHERE id = ?', [$facturaId]) ?? [];
 }
 
 /**
- * Emite la factura de renovación de una licencia. Si ya hay una pendiente para
- * esa licencia, devuelve esa, puesta al día con el precio vigente.
+ * Lo que se renueva. Personal: las mismas licencias y, salvo que el cliente
+ * elija otro, el mismo periodo de su último pago. Escuela y Sitio: el plan
+ * vigente, con el cupo del plan si hoy es mayor que el que tenía.
  */
-function factura_de_renovacion(array $licencia, int $clienteId): array {
-    $cat = plan_catalogo()[$licencia['plan']] ?? PLANES_FABRICA['escuela'];
-    $cupo = max((int) $licencia['cupo'], $cat['cupo']);
+function pedido_de_renovacion(array $licencia, ?string $periodo = null): array {
+    if ($licencia['plan'] !== 'personal') {
+        $pedido = plan_pedido((string) $licencia['plan']);
+        $pedido['cupo'] = max((int) $licencia['cupo'], $pedido['cupo']);
+        return $pedido;
+    }
+    if ($periodo === null) {
+        $ultimo = (int) valor('SELECT meses FROM facturas WHERE licencia_id = ? AND estado = "pagada" AND meses IS NOT NULL
+                                ORDER BY id DESC LIMIT 1', [$licencia['id']], 1);
+        $periodo = $ultimo === 12 ? 'anual' : 'mensual';
+    }
+    return plan_pedido('personal', (int) $licencia['cupo'], $periodo);
+}
+
+/**
+ * Emite la factura de renovación de una licencia. Si ya hay una pendiente para
+ * esa licencia, devuelve esa, puesta al día con el precio vigente (y con el
+ * periodo elegido, si nadie ha empezado a pagarla).
+ */
+function factura_de_renovacion(array $licencia, int $clienteId, ?string $periodo = null): array {
+    $pedido = pedido_de_renovacion($licencia, $periodo);
 
     $pendiente = fila('SELECT * FROM facturas
                         WHERE licencia_id = ? AND cliente_id = ? AND tipo = "renovacion" AND estado IN ("pendiente","vencida")
                      ORDER BY id DESC LIMIT 1', [$licencia['id'], $clienteId]);
-    if ($pendiente) return factura_al_precio_vigente($pendiente, $cat, $cupo, true);
+    if ($pendiente && ((int) $pendiente['meses'] === $pedido['meses'] || !factura_con_intentos((int) $pendiente['id']))) {
+        return factura_al_precio_vigente($pendiente, $pedido, true);
+    }
 
     $id = insertar('facturas', [
         'cliente_id'  => $clienteId,
         'licencia_id' => (int) $licencia['id'],
         'tipo'        => 'renovacion',
-        'meses'       => $cat['meses'],
+        'meses'       => $pedido['meses'],
         'numero'      => nuevo_numero_factura(),
-        'concepto'    => plan_concepto($cat, $cupo, true),
-        'monto'       => $cat['precio'],
+        'concepto'    => plan_concepto($pedido, $pedido['cupo'], true),
+        'monto'       => $pedido['monto'],
         'moneda'      => 'COP',
         'estado'      => 'pendiente',
         'emitida_en'  => date('Y-m-d'),

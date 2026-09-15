@@ -5,6 +5,10 @@
  * Crea la cuenta de cliente (si no la tiene), el pedido —licencia suspendida
  * hasta el pago y su factura— y envía al formulario de pago del portal.
  *
+ * Se compra exactamente lo que ofrece la calculadora de precios.html: el plan
+ * Personal por cantidad (1 a PLAN_PERSONAL_MAX) y periodo (mensual o anual), y
+ * Escuela y Sitio como tarifa única. El precio lo calcula plan_pedido().
+ *
  * Dos reglas de seguridad que esta página no puede volver a romper:
  *
  * 1. **Nunca se abre la sesión de una cuenta que ya existe.** Antes bastaba
@@ -22,9 +26,29 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/layout.php';
 require_once __DIR__ . '/includes/pagos_api.php';
 
+/** Textos del resumen de un pedido, iguales al pintar la página y al cambiar la selección. */
+function compra_resumen(array $pd): array {
+    $nota = '';
+    if ($pd['plan'] === 'personal' && $pd['meses'] === 12) {
+        $ahorro = plan_pedido('personal', $pd['cupo'], 'mensual')['monto'] * 12 - $pd['monto'];
+        $nota = '12 meses por el precio de ' . PLAN_PERSONAL_MESES_ANUAL . ': ahorras ' . plan_pesos($ahorro) . '.';
+    } elseif ($pd['plan'] === 'personal') {
+        $nota = 'Sin permanencia: renuevas mes a mes desde tu portal.';
+    }
+    return [
+        'nombre'   => $pd['nombre'],
+        'total'    => plan_pesos($pd['monto']),
+        'periodo'  => $pd['meses'] === 1 ? 'mes' : 'año',
+        'vigencia' => plan_puestos($pd['cupo']) . ' · ' . ($pd['meses'] === 1 ? 'un mes' : 'un año') . ' de vigencia desde el día del pago.',
+        'nota'     => $nota,
+    ];
+}
+
 $catalogo = plan_catalogo();
 $plan = get('plan');
 if (!isset($catalogo[$plan])) $plan = plan_sugerido(get_int('licencias') ?: 100);
+$licencias = max(1, min(PLAN_PERSONAL_MAX, get_int('licencias', 1)));
+$periodo = get('periodo') === 'anual' ? 'anual' : 'mensual';
 
 $u = usuario();
 $esCliente = $u && $u['rol'] === 'cliente';
@@ -42,6 +66,9 @@ if (es_post()) {
     exigir_csrf();
     foreach ($d as $k => $_) $d[$k] = post($k, '');
     $plan = isset($catalogo[post('plan')]) ? post('plan') : $plan;
+    $licencias = max(1, min(PLAN_PERSONAL_MAX, post_int('licencias', 1)));
+    $periodo = post('periodo') === 'anual' ? 'anual' : 'mensual';
+    $aqui = 'comprar.php?' . http_build_query(['plan' => $plan, 'licencias' => $licencias, 'periodo' => $periodo]);
     $email = mb_strtolower(trim($d['email']));
 
     $error = null;
@@ -58,7 +85,7 @@ if (es_post()) {
 
     if (!$error && !$esCliente && valor('SELECT id FROM usuarios WHERE email = ?', [$email])) {
         // Regla 1: el correo ya tiene cuenta. Se pide la contraseña, no se entra.
-        $_SESSION['destino'] = 'comprar.php?plan=' . $plan;
+        $_SESSION['destino'] = $aqui;
         auditar('compra_requiere_login', 'usuarios', null, $email);
         flash_err('Ese correo ya tiene una cuenta en VCodePro. Entra con tu contraseña y continúa la compra.');
         redirigir('portal/login.php');
@@ -91,18 +118,18 @@ if (es_post()) {
                 'colegio_id' => $colegioId, 'telefono' => $d['telefono'] ?: null,
                 'cargo' => 'Contacto de licenciamiento',
             ]);
-            if (!$ok) { flash_err((string) $res); redirigir('comprar.php?plan=' . $plan); }
+            if (!$ok) { flash_err((string) $res); redirigir($aqui); }
             $clienteId = (int) $res;
         }
 
-        $factura = compra_crear($plan, $clienteId, $colegioId);
+        $factura = compra_crear($plan, $clienteId, $colegioId, $licencias, $periodo);
         if (!$factura) {
             flash_err('No se pudo registrar el pedido. Inténtalo de nuevo.');
-            redirigir('comprar.php?plan=' . $plan);
+            redirigir($aqui);
         }
 
         avisar_admins('Compra en línea iniciada',
-            ($d['colegio'] ?: ($u['colegio_nombre'] ?? '')) . ' · plan ' . $catalogo[$plan]['nombre'] . ' · ' . $factura['numero'],
+            ($d['colegio'] ?: ($u['colegio_nombre'] ?? '')) . ' · ' . $factura['concepto'] . ' · ' . $factura['numero'],
             'aviso');
 
         if (!$esCliente) {
@@ -113,7 +140,24 @@ if (es_post()) {
     }
 }
 
-$sel = $catalogo[$plan];
+$pedido = plan_pedido($plan, $licencias, $periodo);
+$resumen = compra_resumen($pedido);
+
+// Todas las combinaciones posibles, calculadas en el servidor: al cambiar la
+// selección, el navegador solo muestra la que corresponde, sin repetir precios.
+$opciones = [];
+foreach (array_keys($catalogo) as $k) {
+    if ($k === 'personal') {
+        for ($n = 1; $n <= PLAN_PERSONAL_MAX; $n++) {
+            foreach (['mensual', 'anual'] as $per) {
+                $opciones["personal|$n|$per"] = compra_resumen(plan_pedido('personal', $n, $per));
+            }
+        }
+    } else {
+        $opciones[$k] = compra_resumen(plan_pedido($k));
+    }
+}
+
 $actividades = (int) valor('SELECT COUNT(*) FROM actividades WHERE publicada = 1', [], 0);
 cabecera('Comprar una licencia', ['publica' => true]);
 ?>
@@ -122,11 +166,12 @@ cabecera('Comprar una licencia', ['publica' => true]);
     <img src="<?= url('assets/img/logo-mark.svg') ?>" alt="" width="30" height="30">
     <span>vcode<span class="pro">pro</span></span>
   </a>
-  <h2>Licencia <?= h($sel['nombre']) ?></h2>
-  <p><?= h(plan_puestos($sel['cupo'])) ?> · <?= $sel['meses'] === 1 ? 'un mes' : 'un año' ?> de vigencia desde el día del pago.</p>
+  <h2>Licencia <span id="compra-nombre"><?= h($resumen['nombre']) ?></span></h2>
+  <p id="compra-vigencia"><?= h($resumen['vigencia']) ?></p>
   <p style="font-size:2rem;color:#fff;font-weight:700;margin:.5rem 0">
-    <?= h(plan_pesos($sel['precio'])) ?> <span style="font-size:1rem;font-weight:400;color:#b9c8d9">COP / <?= h(plan_periodo($sel)) ?></span>
+    <span id="compra-total"><?= h($resumen['total']) ?></span> <span style="font-size:1rem;font-weight:400;color:#b9c8d9">COP / <span id="compra-periodo"><?= h($resumen['periodo']) ?></span></span>
   </p>
+  <p id="compra-nota" style="color:#b9c8d9" <?= $resumen['nota'] === '' ? 'hidden' : '' ?>><?= h($resumen['nota']) ?></p>
   <ul class="auth-puntos">
     <li><i>✓</i><span><b>Portal académico incluido</b><?= $actividades ?> actividades del ciclo de diseño, de 6.º a 12.º.</span></li>
     <li><i>✓</i><span><b>Acceso inmediato</b>La licencia se activa apenas Mercado Pago acredita el pago.</span></li>
@@ -148,17 +193,38 @@ cabecera('Comprar una licencia', ['publica' => true]);
       <div class="aviso aviso-warn"><div>Tienes sesión como <?= h(mb_strtolower(ROLES[$u['rol']] ?? $u['rol'])) ?>. Para comprar necesitas una cuenta de cliente.</div></div>
     <?php endif; ?>
 
-    <form method="post" novalidate>
+    <form method="post" novalidate id="form-compra">
       <?= csrf_campo() ?>
       <div class="campo">
         <label for="plan">Plan</label>
         <select id="plan" name="plan">
           <?php foreach ($catalogo as $k => $c): ?>
             <option value="<?= h($k) ?>" <?= $k === $plan ? 'selected' : '' ?>>
-              <?= h($c['nombre']) ?> · <?= h(plan_puestos($c['cupo'])) ?> · <?= h(plan_pesos($c['precio'])) ?> / <?= h(plan_periodo($c)) ?>
+              <?php if ($k === 'personal'): ?>
+                <?= h($c['nombre']) ?> · por licencia · <?= h(plan_pesos($c['precio'])) ?> / mes
+              <?php else: ?>
+                <?= h($c['nombre']) ?> · <?= h(plan_puestos($c['cupo'])) ?> · <?= h(plan_pesos($c['precio'])) ?> / <?= h(plan_periodo($c)) ?>
+              <?php endif; ?>
             </option>
           <?php endforeach; ?>
         </select>
+      </div>
+      <div class="campo-fila" id="campos-personal" <?= $plan === 'personal' ? '' : 'hidden' ?>>
+        <div class="campo">
+          <label for="licencias">Licencias</label>
+          <select id="licencias" name="licencias">
+            <?php for ($n = 1; $n <= PLAN_PERSONAL_MAX; $n++): ?>
+              <option value="<?= $n ?>" <?= $n === $licencias ? 'selected' : '' ?>><?= $n ?></option>
+            <?php endfor; ?>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="periodo">Pago</label>
+          <select id="periodo" name="periodo">
+            <option value="mensual" <?= $periodo === 'mensual' ? 'selected' : '' ?>>Cada mes</option>
+            <option value="anual" <?= $periodo === 'anual' ? 'selected' : '' ?>>Anual · 12 meses por <?= PLAN_PERSONAL_MESES_ANUAL ?></option>
+          </select>
+        </div>
       </div>
       <div class="campo-fila">
         <div class="campo"><label for="nombre">Nombres</label><input type="text" id="nombre" name="nombre" value="<?= h($d['nombre']) ?>" required></div>
@@ -186,7 +252,7 @@ cabecera('Comprar una licencia', ['publica' => true]);
         <input type="checkbox" name="acepto" value="1" required>
         <span>Acepto los <a href="<?= url('privacidad.html') ?>" target="_blank">términos de uso y la política de privacidad</a>.</span>
       </label>
-      <button class="btn btn-block btn-lg" type="submit" <?= $u && !$esCliente ? 'disabled' : '' ?>>Continuar al pago</button>
+      <button class="btn btn-block btn-lg" type="submit" <?= $u && !$esCliente ? 'disabled' : '' ?>>Continuar al pago · <span id="compra-boton"><?= h($resumen['total']) ?></span></button>
     </form>
 
     <p class="auth-pie">
@@ -195,4 +261,30 @@ cabecera('Comprar una licencia', ['publica' => true]);
     </p>
   </div>
 </section>
+<script>
+(function () {
+  var opciones = <?= json_encode($opciones, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+  var plan = document.getElementById("plan");
+  var licencias = document.getElementById("licencias");
+  var periodo = document.getElementById("periodo");
+  var personal = document.getElementById("campos-personal");
+  var poner = function (id, texto) { var el = document.getElementById(id); if (el) { el.textContent = texto; } };
+
+  function actualizar() {
+    var esPersonal = plan.value === "personal";
+    personal.hidden = !esPersonal;
+    var r = opciones[esPersonal ? "personal|" + licencias.value + "|" + periodo.value : plan.value];
+    if (!r) { return; }
+    poner("compra-nombre", r.nombre);
+    poner("compra-vigencia", r.vigencia);
+    poner("compra-total", r.total);
+    poner("compra-periodo", r.periodo);
+    poner("compra-boton", r.total);
+    var nota = document.getElementById("compra-nota");
+    nota.textContent = r.nota;
+    nota.hidden = r.nota === "";
+  }
+  [plan, licencias, periodo].forEach(function (el) { el.addEventListener("change", actualizar); });
+})();
+</script>
 <?php pie(['publica' => true]); ?>

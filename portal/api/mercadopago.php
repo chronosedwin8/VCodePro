@@ -45,7 +45,9 @@ if (!is_array($datos)) $datos = [];
 $cabeceras = cabeceras_peticion();
 
 // El identificador del recurso viaja en la query (?data.id=) y en el cuerpo.
-$recursoId = (string) ($_GET['data.id'] ?? $_GET['id'] ?? ($datos['data']['id'] ?? $datos['id'] ?? ''));
+// PHP convierte los puntos de los parámetros en guiones bajos: ?data.id= llega
+// como $_GET['data_id']. Es el valor con el que Mercado Pago firma.
+$recursoId = (string) ($_GET['data_id'] ?? $_GET['id'] ?? ($datos['data']['id'] ?? $datos['id'] ?? ''));
 $tipo   = (string) ($datos['type'] ?? $datos['topic'] ?? ($_GET['type'] ?? $_GET['topic'] ?? ''));
 $accion = (string) ($datos['action'] ?? '');
 

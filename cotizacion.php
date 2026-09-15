@@ -21,22 +21,21 @@ $periodo   = get('periodo') === 'mensual' ? 'mensual' : 'anual';
 $pedido    = get('plan');
 
 // --- Cálculo (espejo de precios.js) --------------------------------------------
-const COT_MAX_PERSONAL = 10;     // la calculadora ofrece Personal hasta 10 licencias
-const COT_MESES_ANUAL  = 10;     // pago anual del plan Personal: 12 meses de uso, se cobran 10
-
-$mensualPersonal = $cat['personal']['precio'] / $cat['personal']['meses'];
+// Personal usa las mismas reglas que la compra (PLAN_PERSONAL_*). Aquí no se le
+// pone el tope de licencias porque también sirve para comparar: «50 licencias
+// Personal costarían…», aunque solo se vendan hasta PLAN_PERSONAL_MAX.
+$mensualPersonal = $cat['personal']['precio'];
 $anual = fn(string $k) => $cat[$k]['meses'] === 12 ? $cat[$k]['precio'] : $cat[$k]['precio'] * 12;
 
 $costo = function (string $plan) use ($licencias, $periodo, $mensualPersonal, $anual): float {
     if ($plan === 'personal') {
-        $mensual = $mensualPersonal * $licencias;
-        return $periodo === 'anual' ? $mensual * COT_MESES_ANUAL : $mensual;
+        return $mensualPersonal * $licencias * ($periodo === 'anual' ? PLAN_PERSONAL_MESES_ANUAL : 1);
     }
     return $periodo === 'anual' ? $anual($plan) : $anual($plan) / 12;
 };
 
 $elegibles = [];
-if ($licencias <= COT_MAX_PERSONAL)           $elegibles[] = 'personal';
+if ($licencias <= PLAN_PERSONAL_MAX)          $elegibles[] = 'personal';
 if ($licencias <= $cat['escuela']['cupo'])    $elegibles[] = 'escuela';
 if ($licencias <= $cat['sitio']['cupo'])      $elegibles[] = 'sitio';
 
@@ -57,7 +56,7 @@ $ahorro  = $plan !== 'personal' ? $costo('personal') - $total : 0;
 
 if ($plan === 'personal') {
     $detalle = $licencias . ($licencias === 1 ? ' licencia' : ' licencias') . ' × ' . plan_pesos($mensualPersonal)
-             . ' al mes' . ($periodo === 'anual' ? ' × ' . COT_MESES_ANUAL . ' meses facturados (12 meses de uso)' : '');
+             . ' al mes' . ($periodo === 'anual' ? ' × ' . PLAN_PERSONAL_MESES_ANUAL . ' meses facturados (12 meses de uso)' : '');
 } else {
     $detalle = 'Tarifa única para hasta ' . $datos['cupo'] . ' licencias'
              . ($periodo === 'anual' ? ' durante 12 meses' : ', prorrateada al mes');
@@ -154,8 +153,15 @@ pdf_texto($pdf, $m, $y, 'CÓMO CONTRATAR', 9, true, '#0078d4');
 $y += 10;
 pdf_linea($pdf, $m, $y, $der, $y, '#0078d4', 1);
 $y += 20;
+$compra = $plan === 'personal'
+    ? http_build_query(['plan' => $plan, 'licencias' => $licencias, 'periodo' => $periodo])
+    : http_build_query(['plan' => $plan]);
 $y = pdf_parrafo($pdf, $m, $y, $der - $m,
-    'Pago en línea con tarjeta, PSE o efectivo a través de Mercado Pago: ' . $sitio . '/comprar.php?plan=' . $plan, 10);
+    'Pago en línea con tarjeta, PSE o efectivo a través de Mercado Pago: ' . $sitio . '/comprar.php?' . $compra, 10);
+if ($plan !== 'personal' && $periodo === 'mensual') {
+    $y = pdf_parrafo($pdf, $m, $y + 2, $der - $m,
+        'El valor mensual es de referencia: el plan ' . $datos['nombre'] . ' se paga por año (' . plan_pesos($anual($plan)) . ').', 10);
+}
 $y = pdf_parrafo($pdf, $m, $y + 2, $der - $m,
     'Orden de compra, transferencia o condiciones especiales: licencias@vcodepro.de', 10);
 

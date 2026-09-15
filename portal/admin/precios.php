@@ -81,12 +81,18 @@ cabecera('Precios', [
         </div>
 
         <div class="campo">
-          <label for="p-<?= $clave ?>">Precio (COP, sin puntos)</label>
+          <label for="p-<?= $clave ?>"><?= $clave === 'personal' ? 'Precio por licencia al mes' : 'Precio' ?> (COP, sin puntos)</label>
           <input type="number" id="p-<?= $clave ?>" name="planes[<?= $clave ?>][precio]" value="<?= h((string) $v['precio']) ?>"
                  min="<?= PLAN_PRECIO_MIN ?>" max="<?= PLAN_PRECIO_MAX ?>" step="1" required data-precio="<?= $clave ?>">
           <?php if (isset($e['precio'])): ?><span class="pista es-error"><?= h($e['precio']) ?></span><?php endif; ?>
         </div>
 
+        <?php if ($clave === 'personal'): ?>
+          <p class="txt-sm txt-muted">
+            Se vende por licencia, de 1 a <?= PLAN_PERSONAL_MAX ?>. Quien compra elige pagar cada mes o
+            por año anticipado: 12 meses por el precio de <?= PLAN_PERSONAL_MESES_ANUAL ?>.
+          </p>
+        <?php else: ?>
         <div class="campo-fila">
           <div class="campo">
             <label for="c-<?= $clave ?>">Cupo</label>
@@ -102,6 +108,7 @@ cabecera('Precios', [
             </select>
           </div>
         </div>
+        <?php endif; ?>
 
         <div class="ia-caja">
           <h4>Así se ve hoy en la web</h4>

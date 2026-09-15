@@ -36,16 +36,30 @@ const PLAN_PRECIO_MIN = 1000;
 const PLAN_PRECIO_MAX = 500000000;
 const PLAN_CUPO_MAX   = 5000;
 
+/**
+ * Plan Personal: se vende por licencia, de 1 a PLAN_PERSONAL_MAX, y su precio
+ * es siempre por licencia al mes. Se paga mes a mes o por año anticipado, que
+ * cubre 12 meses y cobra PLAN_PERSONAL_MESES_ANUAL. Por encima de ese número
+ * conviene el plan Escuela, y la calculadora lo recomienda.
+ */
+const PLAN_PERSONAL_MAX         = 10;
+const PLAN_PERSONAL_MESES_ANUAL = 10;
+
 /** Catálogo vigente: lo guardado por la administración, o el de fábrica. */
 function plan_catalogo(): array {
     $guardado = json_decode((string) ajuste('planes', ''), true);
     $out = [];
     foreach (PLANES_FABRICA as $clave => $fabrica) {
-        $p = is_array($guardado[$clave] ?? null) ? $guardado[$clave] + $fabrica : $fabrica;
+        $p = plan_fijar($clave, is_array($guardado[$clave] ?? null) ? $guardado[$clave] + $fabrica : $fabrica);
         [$ok] = plan_validar($p);
         $out[$clave] = $ok ? plan_normalizar($p) : $fabrica;
     }
     return $out;
+}
+
+/** Lo que no se edita: el plan Personal es siempre 1 licencia al mes; la cantidad y el periodo los elige quien compra. */
+function plan_fijar(string $clave, array $p): array {
+    return $clave === 'personal' ? ['cupo' => 1, 'meses' => 1] + $p : $p;
 }
 
 function plan_normalizar(array $p): array {
@@ -94,7 +108,7 @@ function plan_guardar(array $planes): array {
     $nuevo = [];
     $errores = [];
     foreach (PLANES_FABRICA as $clave => $_) {
-        $p = is_array($planes[$clave] ?? null) ? $planes[$clave] : [];
+        $p = plan_fijar($clave, is_array($planes[$clave] ?? null) ? $planes[$clave] : []);
         [$ok, $e] = plan_validar($p);
         if (!$ok) { $errores[$clave] = $e; continue; }
         $nuevo[$clave] = plan_normalizar($p);
@@ -137,6 +151,31 @@ function plan_concepto(array $p, int $cupo, bool $renovacion = false): string {
          . ' · ' . plan_puestos($cupo) . ' · ' . plan_periodo_largo($p);
 }
 
+/**
+ * Qué se compra y cuánto cuesta. Es el único cálculo de precio de una venta:
+ * lo usan la compra en línea, las renovaciones y la cotización en PDF.
+ *
+ *   Personal       $licencias (1 a PLAN_PERSONAL_MAX) × precio mensual; si
+ *                  $periodo es «anual», 12 meses por PLAN_PERSONAL_MESES_ANUAL.
+ *   Escuela, Sitio tarifa única con el cupo y la periodicidad del catálogo;
+ *                  la cantidad y el periodo no cambian el precio.
+ *
+ * Devuelve plan, nombre, cupo, meses y monto (entero, en COP).
+ */
+function plan_pedido(string $plan, int $licencias = 1, string $periodo = 'mensual'): array {
+    $catalogo = plan_catalogo();
+    if (!isset($catalogo[$plan])) $plan = 'escuela';
+    $p = $catalogo[$plan];
+
+    if ($plan === 'personal') {
+        $cupo  = max(1, min(PLAN_PERSONAL_MAX, $licencias));
+        $anual = $periodo === 'anual';
+        return ['plan' => $plan, 'nombre' => $p['nombre'], 'cupo' => $cupo, 'meses' => $anual ? 12 : 1,
+                'monto' => $p['precio'] * $cupo * ($anual ? PLAN_PERSONAL_MESES_ANUAL : 1)];
+    }
+    return ['plan' => $plan, 'nombre' => $p['nombre'], 'cupo' => $p['cupo'], 'meses' => $p['meses'], 'monto' => $p['precio']];
+}
+
 /** Elige el plan más económico que cubra el número de licencias pedido. */
 function plan_sugerido(int $licencias): string {
     $cat = plan_catalogo();
@@ -158,6 +197,9 @@ function planes_publicos(): array {
             'por_licencia_mes_texto' => plan_pesos($unitario),
             'comprar'                => 'comprar.php?plan=' . $clave,
         ];
+        if ($clave === 'personal') {
+            $out[$clave] += ['max_licencias' => PLAN_PERSONAL_MAX, 'meses_cobrados_anual' => PLAN_PERSONAL_MESES_ANUAL];
+        }
     }
     return $out;
 }

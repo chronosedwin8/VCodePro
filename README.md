@@ -242,6 +242,18 @@ Al cambiar un precio, las compras y renovaciones nuevas se cobran con él al ins
 factura pendiente sin intentos de pago se pone al día; una que el cliente ya empezó a pagar
 conserva su valor.
 
+**Se compra lo que calcula la calculadora.** Todas las ventas pasan por `plan_pedido()`:
+
+| Plan | Qué elige quien compra | Precio |
+|---|---|---|
+| Personal | De 1 a 10 licencias, pago mensual o anual | Licencias × precio mensual; el anual cubre 12 meses y cobra 10 |
+| Escuela y Sitio | Nada: tarifa única | El del catálogo, con su cupo y su periodicidad |
+
+El botón «Comprar en línea» de la calculadora lleva la cantidad y el periodo a `comprar.php`, y la
+cotización en PDF enlaza la misma compra. Al renovar una licencia Personal se repiten sus
+licencias y el periodo del último pago, y el cliente puede cambiar a mensual o anual. Por encima de
+10 licencias la calculadora recomienda Escuela.
+
 **Lo que se paga es lo que se activa.** Cada factura sabe qué compra (`facturas.tipo`: compra,
 renovación o manual) y por cuántos meses. Al acreditarse el pago:
 

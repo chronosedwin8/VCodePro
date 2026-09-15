@@ -286,9 +286,16 @@ preferencia. Sí debe ser **pública y con HTTPS**, o el retorno automático no 
 
 1. **Revisa los precios** en **Admin → Precios**. Son los que se cobran y los que muestra la
    web; los de fábrica son 150.000, 5.000.000 y 20.000.000 COP.
-2. **Configura la clave secreta del webhook.** Sin ella las notificaciones se procesan igual
-   —el portal siempre reconsulta el pago en la API, así que una notificación falsa no puede
-   saldar nada—, pero con ella se descartan en la puerta.
+2. **Registra el webhook.** En Mercado Pago: *Tus integraciones → tu aplicación → Webhooks →
+   Configurar notificaciones*, modo **productivo**:
+   - URL: `https://www.vcodepro.de/portal/api/mercadopago.php`
+   - Evento: **Pagos** (el portal solo concilia notificaciones de tipo `payment`).
+
+   Al guardar, Mercado Pago muestra una **clave secreta**. Ponla en `MERCADOPAGO_WEBHOOK_SECRET`
+   de `includes/config.local.php` (o en *Admin → Ajustes*). Sin ella las notificaciones se
+   procesan igual —el portal siempre reconsulta el pago en la API, así que una notificación
+   falsa no puede saldar nada—, pero con ella se descartan en la puerta. Abre la URL en el
+   navegador: debe responder `"estado":"listo"`.
 3. **Haz una compra completa con credenciales de prueba** antes de pasar a producción: compra
    un plan desde `precios.html`, paga con una tarjeta de prueba y comprueba que la factura
    queda pagada, la licencia activa con vigencia desde ese día y que en *Facturación* aparece
