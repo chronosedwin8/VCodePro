@@ -60,7 +60,7 @@ cabecera('Panel del cliente', [
             <?php foreach ($licencias as $l): $d = dias_para($l['vence_en']); ?>
               <tr>
                 <td><code class="mono copiar" data-copiar="<?= h($l['clave']) ?>"><?= h($l['clave']) ?></code></td>
-                <td class="txt-sm"><?= h(ucfirst($l['plan'])) ?></td>
+                <td class="txt-sm"><?= h(plan_catalogo()[$l['plan']]['nombre'] ?? ucfirst($l['plan'])) ?></td>
                 <td>
                   <?= barra(porcentaje((float) $l['usados'], (float) max(1, (int) $l['cupo'])), (int) $l['usados'] >= (int) $l['cupo'] ? 'err' : '') ?>
                   <span class="txt-sm txt-muted"><?= (int) $l['usados'] ?> de <?= (int) $l['cupo'] ?></span>

@@ -30,20 +30,34 @@ if (es_post()) {
                 'concepto'    => post('concepto'),
                 'monto'       => (float) post('monto', '0'),
                 'moneda'      => mb_strtoupper(post('moneda') ?: 'COP'),
-                'estado'      => in_array(post('estado'), ['pagada', 'pendiente', 'vencida', 'anulada'], true) ? post('estado') : 'pendiente',
+                // Si se registra ya pagada, se salda justo después por la vía común.
+                'estado'      => in_array(post('estado'), ['pendiente', 'vencida', 'anulada'], true) ? post('estado') : 'pendiente',
+                'tipo'        => 'manual',
                 'emitida_en'  => post('emitida_en') ?: date('Y-m-d'),
                 'vence_en'    => post('vence_en') ?: date('Y-m-d', strtotime('+30 days')),
             ]);
             auditar('factura_creada', 'facturas', $fid, $numero);
+            if (post('estado') === 'pagada') factura_marcar_pagada($fid, 'manual', 'Registrado por ' . $u['email']);
             notificar(post_int('cliente_id'), 'Nueva factura ' . $numero, post('concepto'), 'portal/cliente/facturas.php');
             flash_ok('Factura ' . $numero . ' registrada.');
         }
     }
 
     if ($accion === 'estado' && $id) {
-        actualizar('facturas', ['estado' => post('valor')], 'id = :id', ['id' => $id]);
-        auditar('factura_estado', 'facturas', $id, post('valor'));
-        flash_ok('Estado de la factura actualizado.');
+        $valor = post('valor');
+        if (!in_array($valor, ['pagada', 'pendiente', 'vencida', 'anulada'], true)) {
+            flash_err('Estado no válido.');
+        } elseif ($valor === 'pagada') {
+            // Un pago por transferencia tiene el mismo efecto que uno de la
+            // pasarela: activa la licencia comprada o extiende la renovada.
+            factura_marcar_pagada($id, 'manual', 'Registrado por ' . $u['email'])
+                ? flash_ok('Factura marcada como pagada. La licencia asociada quedó actualizada.')
+                : flash_err('La factura ya estaba pagada o está anulada.');
+        } else {
+            actualizar('facturas', ['estado' => $valor], 'id = :id', ['id' => $id]);
+            auditar('factura_estado', 'facturas', $id, $valor);
+            flash_ok('Estado de la factura actualizado.');
+        }
     }
 
     if ($accion === 'sincronizar' && $id) {
@@ -147,7 +161,7 @@ cabecera('Facturación', [
                   <button class="btn btn-xs btn-ghost" name="accion" value="estado" onclick="this.form.valor.value='pendiente'">Reabrir</button>
                 <?php endif; ?>
                 <button class="btn btn-xs btn-ghost" name="accion" value="estado" onclick="this.form.valor.value='anulada'" data-confirmar="¿Anular la factura?">Anular</button>
-                <?php if ($f['referencia_pago']): ?>
+                <?php if ($f['pasarela'] === 'mercadopago'): ?>
                   <button class="btn btn-xs btn-ghost" name="accion" value="sincronizar" title="Volver a consultar el pago en la pasarela">Sincronizar</button>
                 <?php endif; ?>
                 <button class="btn btn-xs btn-err" name="accion" value="eliminar" data-confirmar="¿Eliminar el documento?">Eliminar</button>

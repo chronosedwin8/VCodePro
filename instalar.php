@@ -102,6 +102,9 @@ try {
         ['facturas', 'referencia_pago', "VARCHAR(60) DEFAULT NULL AFTER estado"],
         ['facturas', 'pasarela',        "VARCHAR(30) DEFAULT NULL AFTER referencia_pago"],
         ['facturas', 'pagada_en',       "DATETIME DEFAULT NULL AFTER pasarela"],
+        // Qué compra una factura: decide si al pagarla se activa o se extiende la licencia.
+        ['facturas', 'tipo',            "ENUM('compra','renovacion','manual') NOT NULL DEFAULT 'manual' AFTER licencia_id"],
+        ['facturas', 'meses',           "TINYINT UNSIGNED DEFAULT NULL AFTER tipo"],
         ['pagos',    'preferencia_id',  "VARCHAR(60) DEFAULT NULL AFTER pago_externo"],
         // Asistente de IA: permiso por docente y trazabilidad de lo que propone.
         ['usuarios',       'ia_habilitada',   "TINYINT(1) NOT NULL DEFAULT 0 AFTER origen"],
@@ -138,6 +141,17 @@ try {
         $agregadas++;
     }
     if ($agregadas) paso("Migraciones aplicadas: $agregadas cambio(s) de estructura.");
+
+    // Facturas emitidas antes de existir «tipo»: se deduce una sola vez del
+    // concepto que generaba el portal. Las que no encajan quedan como manuales.
+    $deducidas  = (int) $pdo->exec("UPDATE facturas SET tipo = 'renovacion'
+                                     WHERE tipo = 'manual' AND concepto LIKE 'Renovaci%'");
+    $deducidas += (int) $pdo->exec("UPDATE facturas SET tipo = 'compra'
+                                     WHERE tipo = 'manual' AND licencia_id IS NOT NULL AND concepto LIKE 'Licencia %'");
+    $pdo->exec("UPDATE facturas f JOIN licencias l ON l.id = f.licencia_id
+                   SET f.meses = IF(l.plan = 'personal', 1, 12)
+                 WHERE f.meses IS NULL");
+    if ($deducidas) paso("Tipo deducido en $deducidas factura(s) anteriores.");
 
     // ------------------------------------------------------ 3. niveles ----
     $niveles = require __DIR__ . '/db/seed/niveles.php';

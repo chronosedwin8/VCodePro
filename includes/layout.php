@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/richtext.php';
+require_once __DIR__ . '/planes.php';
 
 /** Menú lateral según el rol. Cada entrada: [archivo, etiqueta, icono, ruta]. */
 function menu_lateral(string $rol): array {
@@ -25,6 +26,7 @@ function menu_lateral(string $rol): array {
             ]],
             ['Comercial', [
                 ['licencias.php',    'Licencias',      'key',     'portal/admin/licencias.php'],
+                ['precios.php',      'Precios',        'clipboard', 'portal/admin/precios.php'],
                 ['facturas.php',     'Facturación',    'receipt', 'portal/admin/facturas.php'],
                 ['tickets.php',      'Soporte',        'life',    'portal/admin/tickets.php'],
                 ['mensajes.php',     'Mensajes web',   'mail',    'portal/admin/mensajes.php'],
@@ -112,6 +114,8 @@ function icono(string $n): string {
  */
 function cabecera(string $titulo, array $op = []): void {
     $u = usuario();
+    // Licencias y facturas vencidas por fecha, como mucho cada diez minutos.
+    if ($u) mantener_vigencias();
     $rol = $u['rol'] ?? '';
     $noSinSesion = $op['publica'] ?? false;
     $tema = $u['tema'] ?? 'dark';

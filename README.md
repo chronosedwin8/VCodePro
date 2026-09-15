@@ -229,12 +229,52 @@ URL del webhook y URL de retorno se muestran en ese mismo panel, listas para cop
 
 ---
 
+## Precios, licencias y cotización
+
+**Una sola fuente de precios.** Nombre, precio, cupo y periodicidad de cada plan se editan en
+**Admin → Precios** y viven en `includes/planes.php`. De ahí salen lo que cobra Mercado Pago,
+las tablas del portal y lo que muestran la portada y la página de precios: esas páginas son
+HTML estático y `assets/js/planes.js` pinta los valores vigentes que sirve
+`portal/api/precios.php`. Si el script no carga, se ven los de fábrica escritos en el HTML,
+pero nadie paga un precio distinto del vigente: `comprar.php` muestra y cobra el del servidor.
+
+Al cambiar un precio, las compras y renovaciones nuevas se cobran con él al instante; una
+factura pendiente sin intentos de pago se pone al día; una que el cliente ya empezó a pagar
+conserva su valor.
+
+**Lo que se paga es lo que se activa.** Cada factura sabe qué compra (`facturas.tipo`: compra,
+renovación o manual) y por cuántos meses. Al acreditarse el pago:
+
+| Tipo | Efecto sobre la licencia |
+|---|---|
+| Compra | Se activa con vigencia **desde el día del pago**, por los meses del plan comprado |
+| Renovación | Se extiende desde su vencimiento (o desde hoy, si ya venció) y recibe el cupo vigente del plan |
+| Manual | Se reactiva si estaba suspendida, sin tocar las fechas que puso la administración |
+
+El «Marcar pagada» del administrador pasa por la misma función que la pasarela, así que un
+pago por transferencia tiene exactamente el mismo efecto. Las licencias y facturas pasan solas
+a «vencida» al pasar su fecha, sin esperar a que alguien abra el panel. Una licencia suspendida
+o vencida no reparte puestos.
+
+**Cotización en PDF.** La calculadora de `precios.html` descarga una cotización en PDF que
+genera `cotizacion.php` recalculando con el catálogo, sin librerías: `includes/pdf.php` escribe
+el PDF a mano con las tipografías estándar.
+
+**En el extracto del cliente figura `VCODEPRO`.** La preferencia envía siempre
+`statement_descriptor: "VCODEPRO"` (Mercado Pago documenta un máximo de 13 caracteres para la
+descripción que aparece en la factura de la tarjeta). Es una constante, no un ajuste, para que
+nadie pueda dejarla vacía.
+
+---
+
 ## Estructura
 
 ```
 vcodeproplus/
 ├── index.html … contacto.html     Sitio público (sin cambios de arquitectura)
 ├── instalar.php                   Instalador: esquema + currículo + datos iniciales
+├── comprar.php                    Compra en línea de una licencia
+├── cotizacion.php                 Cotización en PDF con los precios vigentes
 ├── includes/
 │   ├── config.php                 Configuración, rutas y vocabulario IB
 │   ├── config.local.ejemplo.php   Plantilla de credenciales para el servidor
@@ -246,6 +286,8 @@ vcodeproplus/
 │   ├── richtext.php               Lista blanca del HTML que escriben los usuarios
 │   ├── s3.php                     Cliente de Amazon S3 (firma SigV4, sin SDK)
 │   ├── sso.php                    Ingreso con Microsoft (OpenID Connect)
+│   ├── planes.php                 Catálogo de planes: única fuente de precios
+│   ├── pdf.php                    Generador mínimo de PDF, sin dependencias
 │   ├── ia.php                     Cliente de Gemini y permiso del asistente
 │   ├── ia_calificar.php           Calificación asistida de una entrega
 │   ├── adjuntos.php               Archivos que acompañan a una entrega
@@ -269,6 +311,7 @@ vcodeproplus/
     ├── js/adjuntos.js             Subida de archivos sin recargar la página
     ├── js/ia.js                   Calificación de un grupo y redacción de actividades
     ├── js/voz.js                  Grabación de notas de voz, optimizada antes de subir
+    ├── js/planes.js               Precios vigentes en la portada y la página de precios
     └── uploads/                   Entregas y avatares (fuera del control de versiones)
 ```
 
@@ -460,6 +503,12 @@ Se configura en Ajustes → Asistente de IA. Modelo por defecto: `gemini-3.8-fla
   comentario privado hasta que él la publica.
 - Las notas de voz se validan por su contenido y no por su nombre, y el enlace para
   reproducirlas en la página (`inline`) solo se concede a archivos de audio.
+- **Pagos**: un pago aprobado solo salda la factura si el monto y la moneda coinciden con
+  los facturados; una notificación atrasada no degrada un pago aprobado; un segundo cobro
+  aprobado para la misma factura se detecta y se avisa para reembolsarlo; una devolución o un
+  contracargo reabren la factura y suspenden la licencia.
+- **Compra en línea**: `comprar.php` nunca abre la sesión de una cuenta existente (pide la
+  contraseña) y nunca asocia a un comprador anónimo con un colegio existente por su nombre.
 - Los adjuntos viven en un bucket de S3 **privado**. El portal nunca publica su dirección:
   comprueba primero quién pide qué —solo el dueño de la entrega, su docente y la
   administración— y luego redirige a un enlace firmado que caduca en cinco minutos. Lo que

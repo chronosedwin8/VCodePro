@@ -28,6 +28,21 @@
     S: { id: "S", nombre: "Licencia de Sitio",  cupo: 500, maxCupo: 500, precio: "20.000.000 COP al año" }
   };
 
+  // Precios vigentes del portal (los trae planes.js); los de arriba son de fábrica.
+  function aplicarPlanes(planes) {
+    if (!planes) { return; }
+    [["P", "personal"], ["E", "escuela"], ["S", "sitio"]].forEach(function (par) {
+      var p = planes[par[1]];
+      if (!p) { return; }
+      PLANES[par[0]].nombre = p.nombre;
+      PLANES[par[0]].cupo = p.cupo;
+      if (par[0] !== "P") { PLANES[par[0]].maxCupo = p.cupo; }
+      PLANES[par[0]].precio = String(p.precio).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " COP al " + p.periodo;
+    });
+  }
+  aplicarPlanes(window.VCodeProPlanes);
+  document.addEventListener("vcodepro:planes", function (ev) { aplicarPlanes(ev.detail); });
+
   var CLAVE_LICENCIA = "vcodepro-licencia";
   var CLAVE_PUESTOS = "vcodepro-puestos";
   var ALFABETO = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";

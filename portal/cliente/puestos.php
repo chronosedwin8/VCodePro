@@ -28,6 +28,15 @@ if (es_post()) {
     $usados = (int) valor('SELECT COUNT(*) FROM licencia_puestos WHERE licencia_id = ? AND estado = "activo"', [$lid], 0);
     $accion = post('accion');
 
+    // Solo una licencia activa reparte puestos. Si está suspendida por impago o
+    // vencida, se pueden revocar puestos pero no dar nuevos: antes no se miraba.
+    if ($accion !== 'revocar' && $lic['estado'] !== 'activa') {
+        flash_err($lic['estado'] === 'suspendida'
+            ? 'Esta licencia está suspendida hasta que se acredite su pago. Podrás asignar puestos en cuanto se active.'
+            : 'Esta licencia venció. Renuévala para volver a asignar puestos.');
+        redirigir('portal/cliente/puestos.php?licencia=' . $lid);
+    }
+
     if ($accion === 'asignar') {
         $email = mb_strtolower(post('email'));
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -106,7 +115,7 @@ cabecera('Puestos', [
   <select name="licencia" onchange="this.form.submit()">
     <?php foreach ($misLicencias as $l): ?>
       <option value="<?= (int) $l['id'] ?>" <?= $licenciaId === (int) $l['id'] ? 'selected' : '' ?>>
-        <?= h($l['clave']) ?> · <?= h(ucfirst($l['plan'])) ?> · <?= (int) $l['usados'] ?>/<?= (int) $l['cupo'] ?>
+        <?= h($l['clave']) ?> · <?= h(plan_catalogo()[$l['plan']]['nombre'] ?? ucfirst($l['plan'])) ?> · <?= (int) $l['usados'] ?>/<?= (int) $l['cupo'] ?>
       </option>
     <?php endforeach; ?>
   </select>

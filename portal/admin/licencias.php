@@ -10,11 +10,9 @@ require_once __DIR__ . '/../../includes/academico.php';
 
 $u = exigir_rol('admin');
 
-const PLANES = [
-    'personal' => ['Personal', 1, 150000, 'mes'],
-    'escuela'  => ['Escuela', 100, 5000000, 'año'],
-    'sitio'    => ['Licencia de Sitio', 500, 20000000, 'año'],
-];
+// Mismo formato de siempre ([nombre, cupo, precio, periodo]), pero desde el
+// catálogo que la administración edita en Admin → Precios.
+$PLANES = array_map(fn($p) => [$p['nombre'], $p['cupo'], $p['precio'], plan_periodo($p)], plan_catalogo());
 
 if (es_post()) {
     exigir_csrf();
@@ -22,14 +20,14 @@ if (es_post()) {
     $id = post_int('id');
 
     if ($accion === 'emitir') {
-        $plan = array_key_exists(post('plan'), PLANES) ? post('plan') : 'escuela';
-        $meses = $plan === 'personal' ? 1 : 12;
+        $plan = array_key_exists(post('plan'), $PLANES) ? post('plan') : 'escuela';
+        $meses = plan_catalogo()[$plan]['meses'];
         $lid = insertar('licencias', [
             'colegio_id' => post_int('colegio_id') ?: null,
             'cliente_id' => post_int('cliente_id') ?: null,
             'clave'      => generar_clave_licencia($plan),
             'plan'       => $plan,
-            'cupo'       => post_int('cupo') ?: PLANES[$plan][1],
+            'cupo'       => post_int('cupo') ?: $PLANES[$plan][1],
             'emitida_en' => post('emitida_en') ?: date('Y-m-d'),
             'vence_en'   => post('vence_en') ?: date('Y-m-d', strtotime("+$meses months")),
             'estado'     => 'activa',
@@ -48,7 +46,7 @@ if (es_post()) {
     if ($accion === 'renovar' && $id) {
         $l = fila('SELECT * FROM licencias WHERE id = ?', [$id]);
         if ($l) {
-            $meses = $l['plan'] === 'personal' ? 1 : 12;
+            $meses = plan_catalogo()[$l['plan']]['meses'] ?? 12;
             $base = max(time(), strtotime($l['vence_en']));
             actualizar('licencias', [
                 'vence_en' => date('Y-m-d', strtotime("+$meses months", $base)),
@@ -122,7 +120,7 @@ cabecera('Licencias', [
                 <?= h($l['colegio'] ?? '—') ?>
                 <?php if ($l['cliente']): ?><br><span class="txt-muted"><?= h($l['cliente']) ?></span><?php endif; ?>
               </td>
-              <td class="txt-sm"><?= h(PLANES[$l['plan']][0] ?? $l['plan']) ?></td>
+              <td class="txt-sm"><?= h($PLANES[$l['plan']][0] ?? $l['plan']) ?></td>
               <td>
                 <?= barra(porcentaje((float) $l['usados'], (float) max(1, (int) $l['cupo'])), (int) $l['usados'] >= (int) $l['cupo'] ? 'err' : '') ?>
                 <span class="txt-sm txt-muted"><?= (int) $l['usados'] ?> de <?= (int) $l['cupo'] ?></span>
@@ -200,7 +198,7 @@ cabecera('Licencias', [
       <div class="campo">
         <label for="plan">Plan</label>
         <select id="plan" name="plan">
-          <?php foreach (PLANES as $k => $p): ?>
+          <?php foreach ($PLANES as $k => $p): ?>
             <option value="<?= $k ?>"><?= h($p[0]) ?> · <?= $p[1] ?> puestos · <?= moneda((float) $p[2]) ?>/<?= $p[3] ?></option>
           <?php endforeach; ?>
         </select>

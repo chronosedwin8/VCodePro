@@ -197,6 +197,7 @@
     }
 
     ultimoCalculo = {
+      clave: plan,
       plan: datos.nombre,
       licencias: licencias,
       periodo: periodoActual === "anual" ? "Anual (12 meses)" : "Mensual",
@@ -208,56 +209,22 @@
   /* ---------------------------------------------------------------------
      5. Cotización descargable
      --------------------------------------------------------------------- */
-  function textoCotizacion() {
-    if (!ultimoCalculo) { return ""; }
-    var hoy = new Date();
-    var vence = new Date(hoy.getTime() + 30 * 24 * 60 * 60 * 1000);
-    var fecha = function (d) { return d.toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" }); };
-    var linea = "------------------------------------------------------------";
-
-    return [
-      "VCODEPRO — COTIZACIÓN DE LICENCIAMIENTO",
-      linea,
-      "Fecha de emisión : " + fecha(hoy),
-      "Válida hasta     : " + fecha(vence),
-      "Moneda           : Peso colombiano (COP)",
-      "",
-      "DETALLE",
-      linea,
-      "Plan             : " + ultimoCalculo.plan,
-      "Licencias        : " + ultimoCalculo.licencias,
-      "Periodo          : " + ultimoCalculo.periodo,
-      "",
-      "VALORES",
-      linea,
-      "TOTAL            : " + COP(ultimoCalculo.total),
-      "Costo por licencia al mes: " + COP(ultimoCalculo.unitario),
-      "",
-      "CONDICIONES",
-      linea,
-      "· Los precios están expresados en pesos colombianos y son valores finales.",
-      "· Venta digital internacional facturada desde Alemania, sin impuestos añadidos.",
-      "· La vigencia de las licencias inicia el día de la activación.",
-      "· Incluye actualizaciones y soporte durante toda la vigencia.",
-      "· Cotización de referencia generada en el sitio web de VCodePro.",
-      "",
-      "Contacto: licencias@vcodepro.de"
-    ].join("\n");
-  }
-
+  /*
+   * La cotización se genera en el servidor (cotizacion.php) y se descarga en
+   * PDF. El servidor recalcula con los precios del catálogo, así el documento
+   * nunca lleva un precio distinto del que se cobra.
+   */
   function descargarCotizacion() {
-    var texto = textoCotizacion();
-    if (!texto) { return; }
-    var blob = new Blob([texto], { type: "text/plain;charset=utf-8" });
-    var url = URL.createObjectURL(blob);
+    if (!ultimoCalculo) { return; }
     var enlace = document.createElement("a");
-    enlace.href = url;
-    enlace.download = "cotizacion-vcodepro.txt";
+    enlace.href = "cotizacion.php?plan=" + encodeURIComponent(ultimoCalculo.clave) +
+      "&licencias=" + ultimoCalculo.licencias +
+      "&periodo=" + (periodoActual === "anual" ? "anual" : "mensual");
+    enlace.rel = "nofollow";
     document.body.appendChild(enlace);
     enlace.click();
     document.body.removeChild(enlace);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    if (API.aviso) { API.aviso("Cotización descargada."); }
+    if (API.aviso) { API.aviso("Preparando la cotización en PDF…"); }
   }
 
   /* ---------------------------------------------------------------------
@@ -297,6 +264,36 @@
   if (parametros.has("plan") && PLANES[parametros.get("plan")]) {
     selectorPlan.value = parametros.get("plan");
   }
+
+  /* ---------------------------------------------------------------------
+     7. Precios vigentes
+     Las tarifas de arriba son las de fábrica. Las que valen son las que la
+     administración fija en el portal: planes.js las trae y avisa.
+     --------------------------------------------------------------------- */
+  function aplicarPlanes(planes) {
+    if (!planes) { return; }
+    var per = planes.personal;
+    if (per) {
+      PLANES.personal.nombre = per.nombre;
+      PLANES.personal.mensualPorLicencia = per.precio / per.meses;
+    }
+    ["escuela", "sitio"].forEach(function (k) {
+      var p = planes[k];
+      if (!p) { return; }
+      PLANES[k].nombre = p.nombre;
+      PLANES[k].anual = p.meses === 12 ? p.precio : p.precio * 12;
+      PLANES[k].maxLicencias = p.cupo;
+      PLANES[k].descripcion = PLANES[k].descripcion.replace(/\d+ licencias/, p.cupo + " licencias");
+    });
+    $$("option", selectorPlan).forEach(function (op) {
+      if (planes[op.value]) { op.setAttribute("data-nombre", planes[op.value].nombre); }
+    });
+  }
+  aplicarPlanes(window.VCodeProPlanes);
+  document.addEventListener("vcodepro:planes", function (ev) {
+    aplicarPlanes(ev.detail);
+    actualizar();
+  });
 
   actualizar();
 })();

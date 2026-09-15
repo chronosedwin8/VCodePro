@@ -69,7 +69,7 @@ cabecera('Licencias', [
         <div class="panel">
           <div class="panel-h">
             <div>
-              <h2><?= h(ucfirst($l['plan'])) ?> · <?= (int) $l['cupo'] ?> puestos</h2>
+              <h2><?= h(plan_catalogo()[$l['plan']]['nombre'] ?? ucfirst($l['plan'])) ?> · <?= h(plan_puestos((int) $l['cupo'])) ?></h2>
               <p><?= h($l['colegio'] ?? 'Sin colegio asociado') ?></p>
             </div>
             <?= etiqueta_estado($l['estado']) ?>
@@ -86,6 +86,16 @@ cabecera('Licencias', [
             <dt>Vence</dt><dd><?= fecha($l['vence_en']) ?> · <?= $d < 0 ? 'vencida hace ' . abs($d) . ' días' : 'faltan ' . $d . ' días' ?></dd>
             <?php if ($l['notas']): ?><dt>Notas</dt><dd><?= h($l['notas']) ?></dd><?php endif; ?>
           </dl>
+          <?php if ($l['estado'] === 'suspendida'):
+              $porPagar = fila('SELECT id, numero FROM facturas WHERE licencia_id = ? AND estado IN ("pendiente","vencida")
+                                ORDER BY id DESC LIMIT 1', [$l['id']]); ?>
+            <?php if ($porPagar): ?>
+              <div class="aviso aviso-warn mt-2"><div>
+                <strong>Esta licencia se activa en cuanto se acredite el pago</strong> de la factura <?= h($porPagar['numero']) ?>.
+                <a class="btn btn-sm" style="margin-left:6px" href="<?= url('portal/cliente/pagar.php?factura=' . (int) $porPagar['id']) ?>">Pagar ahora</a>
+              </div></div>
+            <?php endif; ?>
+          <?php endif; ?>
           <div class="form-acc">
             <a class="btn btn-ghost btn-sm" href="<?= url('portal/cliente/puestos.php?licencia=' . (int) $l['id']) ?>">Administrar puestos</a>
             <?php if ($d < 60): ?>
@@ -121,9 +131,13 @@ cabecera('Licencias', [
       <div class="panel-h"><h3>Planes disponibles</h3></div>
       <table class="tabla tabla-mini">
         <tbody>
-          <tr><td>Personal</td><td class="num">1 licencia</td><td class="num"><?= moneda(150000) ?>/mes</td></tr>
-          <tr><td>Escuela</td><td class="num">hasta 100</td><td class="num"><?= moneda(5000000) ?>/año</td></tr>
-          <tr><td>Sitio</td><td class="num">hasta 500</td><td class="num"><?= moneda(20000000) ?>/año</td></tr>
+          <?php foreach (plan_catalogo() as $pl): ?>
+            <tr>
+              <td><?= h($pl['nombre']) ?></td>
+              <td class="num"><?= $pl['cupo'] === 1 ? '1 licencia' : 'hasta ' . (int) $pl['cupo'] ?></td>
+              <td class="num"><?= h(plan_pesos($pl['precio'])) ?>/<?= h(plan_periodo($pl)) ?></td>
+            </tr>
+          <?php endforeach; ?>
         </tbody>
       </table>
       <a class="btn btn-ghost btn-sm mt-2" href="<?= url('precios.html') ?>">Ver la calculadora</a>

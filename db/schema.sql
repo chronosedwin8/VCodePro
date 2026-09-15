@@ -363,6 +363,8 @@ CREATE TABLE IF NOT EXISTS facturas (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   cliente_id  INT UNSIGNED NOT NULL,
   licencia_id INT UNSIGNED DEFAULT NULL,
+  tipo        ENUM('compra','renovacion','manual') NOT NULL DEFAULT 'manual',
+  meses       TINYINT UNSIGNED DEFAULT NULL,
   numero      VARCHAR(30) NOT NULL UNIQUE,
   concepto    VARCHAR(200) NOT NULL,
   monto       DECIMAL(14,2) NOT NULL,

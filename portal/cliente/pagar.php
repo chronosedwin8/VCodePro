@@ -37,6 +37,11 @@ if (es_post()) {
         flash_err('La pasarela de pagos todavía no está configurada. Avísale a la coordinación.');
         redirigir('portal/cliente/pagar.php?factura=' . $facturaId);
     }
+    // La cuenta de Mercado Pago del colegio cobra en pesos colombianos.
+    if ((float) $f['monto'] < 1 || strtoupper((string) $f['moneda']) !== 'COP') {
+        flash_err('Esta factura no se puede pagar en línea. Escríbenos y la revisamos.');
+        redirigir('portal/cliente/pagar.php?factura=' . $facturaId);
+    }
     [$ok, $destino] = crear_preferencia($f, $u);
     if (!$ok) {
         flash_err('No se pudo iniciar el pago: ' . $destino);
@@ -145,7 +150,7 @@ cabecera('Pagar factura', [
         <dt>Factura</dt><dd class="mono"><?= h($f['numero']) ?></dd>
         <?php if ($f['clave']): ?>
           <dt>Licencia</dt><dd class="mono txt-sm"><?= h($f['clave']) ?></dd>
-          <dt>Plan</dt><dd><?= h(ucfirst((string) $f['plan'])) ?> · <?= (int) $f['cupo'] ?> puestos</dd>
+          <dt>Plan</dt><dd><?= h(plan_catalogo()[$f['plan']]['nombre'] ?? ucfirst((string) $f['plan'])) ?> · <?= h(plan_puestos((int) $f['cupo'])) ?></dd>
         <?php endif; ?>
         <dt>Emitida</dt><dd><?= fecha($f['emitida_en']) ?></dd>
         <dt>Vence</dt><dd><?= fecha($f['vence_en']) ?></dd>

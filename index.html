@@ -548,10 +548,10 @@
       </div>
 
       <div class="price-grid">
-        <article class="plan reveal">
-          <h3>Personal</h3>
+        <article class="plan reveal" data-plan="personal">
+          <h3 data-plan-nombre>Personal</h3>
           <p class="who">Para el docente que prepara sus clases y para el estudiante que quiere seguir practicando en casa.</p>
-          <p class="price"><b>$150.000</b> <em>COP / mes</em></p>
+          <p class="price"><b data-plan-precio>$150.000</b> <em data-plan-periodo>COP / mes</em></p>
           <p class="price-note">Por usuario · sin permanencia mínima</p>
           <ul>
             <li>Una licencia individual</li>
@@ -563,14 +563,14 @@
           <p class="cta"><a class="btn btn-ghost btn-block" href="precios.html#personal">Ver detalles</a></p>
         </article>
 
-        <article class="plan featured reveal">
+        <article class="plan featured reveal" data-plan="escuela">
           <span class="tag">El más elegido</span>
-          <h3>Escuela</h3>
+          <h3 data-plan-nombre>Escuela</h3>
           <p class="who">Para el colegio que dicta las electivas de tecnología con uno o varios grupos por nivel.</p>
-          <p class="price"><b>$5.000.000</b> <em>COP / año</em></p>
-          <p class="price-note">Hasta 100 licencias · $4.167 por licencia al mes</p>
+          <p class="price"><b data-plan-precio>$5.000.000</b> <em data-plan-periodo>COP / año</em></p>
+          <p class="price-note">Hasta <span data-plan-cupo>100</span> licencias · <span data-plan-unitario>$4.167</span> por licencia al mes</p>
           <ul>
-            <li>Hasta 100 licencias</li>
+            <li>Hasta <span data-plan-cupo>100</span> licencias</li>
             <li>IA de aula y agentes publicados por curso</li>
             <li>Modo aula y panel docente</li>
             <li>Rúbricas del IB y exportación de notas</li>
@@ -580,13 +580,13 @@
           <p class="cta"><a class="btn btn-block" href="precios.html#escuela">Ver detalles</a></p>
         </article>
 
-        <article class="plan reveal">
-          <h3>Licencia de Sitio</h3>
+        <article class="plan reveal" data-plan="sitio">
+          <h3 data-plan-nombre>Licencia de Sitio</h3>
           <p class="who">Para la institución que quiere programación en todos los niveles y en todas las salas.</p>
-          <p class="price"><b>$20.000.000</b> <em>COP / año</em></p>
-          <p class="price-note">Hasta 500 licencias · $3.333 por licencia al mes</p>
+          <p class="price"><b data-plan-precio>$20.000.000</b> <em data-plan-periodo>COP / año</em></p>
+          <p class="price-note">Hasta <span data-plan-cupo>500</span> licencias · <span data-plan-unitario>$3.333</span> por licencia al mes</p>
           <ul>
-            <li>Hasta 500 licencias</li>
+            <li>Hasta <span data-plan-cupo>500</span> licencias</li>
             <li>IA de aula con cuotas por sede y modo examen</li>
             <li>Despliegue asistido en todas las salas</li>
             <li>Panel de coordinación académica</li>
@@ -675,5 +675,6 @@
 </footer>
 
 <script src="assets/js/main.js"></script>
+<script src="assets/js/planes.js"></script>
 </body>
 </html>

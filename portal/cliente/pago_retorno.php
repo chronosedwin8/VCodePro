@@ -39,7 +39,14 @@ cabecera('Resultado del pago', [
 ]);
 ?>
 
-<?php if ($estado === 'aprobado'): ?>
+<?php if ($estado === 'aprobado' && $factura && $factura['estado'] !== 'pagada'): ?>
+  <div class="aviso aviso-warn">
+    <div>
+      <strong>Recibimos tu pago y lo estamos verificando.</strong>
+      No hace falta que pagues de nuevo: el equipo de VCodePro lo revisa y te avisa por el portal.
+    </div>
+  </div>
+<?php elseif ($estado === 'aprobado'): ?>
   <div class="aviso aviso-ok">
     <div>
       <strong>Pago aprobado.</strong>

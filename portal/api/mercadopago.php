@@ -77,11 +77,17 @@ if ($firma === 'invalida') {
 // Las notificaciones de pago se concilian contra la factura. El resto se
 // registra y se responde 200: Mercado Pago no debe reintentarlas.
 $nota = 'Registrada sin conciliar (tipo no relacionado con pagos).';
-if ($recursoId !== '' && in_array($tipo, ['payment', 'order'], true)) {
-    [$okC, $mensaje] = conciliar_pago($recursoId);
+if ($recursoId !== '' && $tipo === 'payment') {
+    [$okC, $mensaje, $reintentar] = array_pad(conciliar_pago($recursoId), 3, false);
     $nota = ($okC ? '' : 'Error al conciliar: ') . $mensaje;
     actualizar('pagos_webhook', ['procesado' => $okC ? 1 : 0, 'nota' => mb_substr($nota, 0, 300)],
         'id = :id', ['id' => $id]);
+    // Si el fallo es pasajero (red, Mercado Pago caído) se responde con error
+    // para que Mercado Pago reintente más tarde. Con un 200, el pago quedaría
+    // sin aplicar hasta que alguien lo sincronizara a mano.
+    if (!$okC && $reintentar) {
+        json_salida(['ok' => false, 'error' => 'reintentar', 'recibido' => $id], 503);
+    }
 }
 
 json_salida(['ok' => true, 'recibido' => $id, 'nota' => $nota]);

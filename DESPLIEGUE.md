@@ -282,6 +282,24 @@ preferencia. Sí debe ser **pública y con HTTPS**, o el retorno automático no 
 
 ---
 
+### Antes de cobrar de verdad
+
+1. **Revisa los precios** en **Admin → Precios**. Son los que se cobran y los que muestra la
+   web; los de fábrica son 150.000, 5.000.000 y 20.000.000 COP.
+2. **Configura la clave secreta del webhook.** Sin ella las notificaciones se procesan igual
+   —el portal siempre reconsulta el pago en la API, así que una notificación falsa no puede
+   saldar nada—, pero con ella se descartan en la puerta.
+3. **Haz una compra completa con credenciales de prueba** antes de pasar a producción: compra
+   un plan desde `precios.html`, paga con una tarjeta de prueba y comprueba que la factura
+   queda pagada, la licencia activa con vigencia desde ese día y que en *Facturación* aparece
+   el pago.
+4. **El nombre en el extracto.** El portal pide `VCODEPRO` en cada cobro con tarjeta. Cómo lo
+   rotula cada banco lo decide el banco emisor, y en PSE o efectivo no aplica. Revisa además que
+   el nombre de tu negocio en la cuenta de Mercado Pago sea el de VCodePro, porque es lo que
+   ven los compradores en los comprobantes de Mercado Pago.
+
+---
+
 ## 10 ter. Adjuntos en Amazon S3
 
 Los estudiantes adjuntan documentos, hojas de cálculo, cuadernos de Python, comprimidos y PDF
