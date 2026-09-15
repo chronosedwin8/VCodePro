@@ -20,10 +20,16 @@ if (!$adj || !adjunto_visible_para($adj, $u)) {
     redirigir(panel_de($u['rol']));
 }
 
-auditar('adjunto_descargado', 'entregas', (int) $adj['entrega_id'], (string) $adj['nombre']);
+// Una nota de voz se reproduce en la página: enlace «inline» con su tipo de
+// audio. Solo para audio; cualquier otro archivo se sigue descargando.
+$enLinea = get('reproducir') !== '' && adjunto_es_audio($adj);
+
+auditar($enLinea ? 'nota_voz_escuchada' : 'adjunto_descargado',
+        'entregas', (int) $adj['entrega_id'], (string) $adj['nombre']);
 
 if ($adj['almacen'] === 's3') {
-    $destino = adjunto_url($adj, 300);
+    // Algo más de margen al reproducir: el reproductor pide trozos al avanzar.
+    $destino = adjunto_url($adj, $enLinea ? 900 : 300, $enLinea);
     if ($destino === '') {
         flash_err('El almacenamiento no está disponible en este momento.');
         redirigir(panel_de($u['rol']));
@@ -40,6 +46,7 @@ if (!is_readable($ruta)) {
 }
 header('Content-Type: ' . $adj['tipo']);
 header('Content-Length: ' . filesize($ruta));
-header('Content-Disposition: attachment; filename="' . str_replace('"', '', (string) $adj['nombre']) . '"');
+header('Content-Disposition: ' . ($enLinea ? 'inline' : 'attachment')
+     . '; filename="' . str_replace('"', '', (string) $adj['nombre']) . '"');
 header('X-Content-Type-Options: nosniff');
 readfile($ruta);

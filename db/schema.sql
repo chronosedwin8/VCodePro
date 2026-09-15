@@ -260,6 +260,7 @@ CREATE TABLE IF NOT EXISTS entrega_adjuntos (
   tipo        VARCHAR(120) NOT NULL DEFAULT 'application/octet-stream',
   extension   VARCHAR(10) NOT NULL,
   bytes       INT UNSIGNED NOT NULL DEFAULT 0,
+  duracion_seg SMALLINT UNSIGNED DEFAULT NULL,
   creado_en   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_adj_ent (entrega_id),
   CONSTRAINT fk_adj_ent  FOREIGN KEY (entrega_id) REFERENCES entregas(id) ON DELETE CASCADE,

@@ -121,7 +121,8 @@ function s3_cabeceras_firmadas(string $metodo, string $clave, string $hashCuerpo
  * Enlace temporal de descarga (SigV4 por parámetros de consulta).
  * Vive pocos minutos: el tiempo de que el navegador siga la redirección.
  */
-function s3_url_temporal(string $clave, int $segundos = 300, string $nombreDescarga = ''): string {
+function s3_url_temporal(string $clave, int $segundos = 300, string $nombreDescarga = '',
+                         bool $enLinea = false, string $tipo = ''): string {
     if (!s3_configurado()) return '';
     $ahora  = gmdate('Ymd\THis\Z');
     $fecha  = substr($ahora, 0, 8);
@@ -137,9 +138,11 @@ function s3_url_temporal(string $clave, int $segundos = 300, string $nombreDesca
     if ($nombreDescarga !== '') {
         // Con esto el navegador guarda el archivo con su nombre original y no
         // con el identificador aleatorio que usamos como clave en el bucket.
-        $params['response-content-disposition'] =
-            'attachment; filename="' . str_replace('"', '', $nombreDescarga) . '"';
+        // «inline» es para lo que se reproduce en la página, como una nota de voz.
+        $params['response-content-disposition'] = ($enLinea ? 'inline' : 'attachment')
+            . '; filename="' . str_replace('"', '', $nombreDescarga) . '"';
     }
+    if ($tipo !== '') $params['response-content-type'] = $tipo;
     ksort($params);
     $consulta = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
 

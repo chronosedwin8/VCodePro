@@ -117,24 +117,8 @@ function adjunto_guardar(array $archivo, int $entregaId, ?int $faseId, int $usua
     }
 
     $mime = adjunto_mime($ext);
-    // Nombre aleatorio: la clave no revela nada y no se puede adivinar.
-    $base = bin2hex(random_bytes(16)) . '.' . $ext;
-
-    if (s3_configurado()) {
-        $clave = trim(s3_prefijo() . '/entregas/' . $entregaId . '/' . $base, '/');
-        [$ok, $motivo] = s3_subir($archivo['tmp_name'], $clave, $mime);
-        if (!$ok) return [false, $motivo];
-        $almacen = 's3';
-    } else {
-        // Sin S3 configurado, el archivo se queda en disco.
-        $dir = RUTA_SUBIDAS . DIRECTORY_SEPARATOR . 'entregas';
-        if (!is_dir($dir)) @mkdir($dir, 0775, true);
-        if (!move_uploaded_file($archivo['tmp_name'], $dir . DIRECTORY_SEPARATOR . $base)) {
-            return [false, 'No se pudo guardar el archivo en el servidor.'];
-        }
-        $clave = 'entregas/' . $base;
-        $almacen = 'local';
-    }
+    [$ok, $clave, $almacen] = adjunto_almacenar($archivo['tmp_name'], $entregaId, $ext, $mime);
+    if (!$ok) return [false, $clave];
 
     $id = insertar('entrega_adjuntos', [
         'entrega_id' => $entregaId,
@@ -150,6 +134,125 @@ function adjunto_guardar(array $archivo, int $entregaId, ?int $faseId, int $usua
     auditar('adjunto_subido', 'entregas', $entregaId, $nombre . ' (' . adjunto_peso($bytes) . ')');
 
     return [true, fila('SELECT * FROM entrega_adjuntos WHERE id = ?', [$id]) ?? []];
+}
+
+/**
+ * Guarda un archivo ya validado en S3 —o en disco si S3 no está configurado—
+ * con un nombre aleatorio. Devuelve [true, clave, almacen] o [false, motivo, ''].
+ */
+function adjunto_almacenar(string $tmp, int $entregaId, string $ext, string $mime, string $prefijo = ''): array {
+    // Nombre aleatorio: la clave no revela nada y no se puede adivinar.
+    $base = $prefijo . bin2hex(random_bytes(16)) . '.' . $ext;
+
+    if (s3_configurado()) {
+        $clave = trim(s3_prefijo() . '/entregas/' . $entregaId . '/' . $base, '/');
+        [$ok, $motivo] = s3_subir($tmp, $clave, $mime);
+        return $ok ? [true, $clave, 's3'] : [false, $motivo, ''];
+    }
+    // Sin S3 configurado, el archivo se queda en disco.
+    $dir = RUTA_SUBIDAS . DIRECTORY_SEPARATOR . 'entregas';
+    if (!is_dir($dir)) @mkdir($dir, 0775, true);
+    if (!move_uploaded_file($tmp, $dir . DIRECTORY_SEPARATOR . $base)) {
+        return [false, 'No se pudo guardar el archivo en el servidor.', ''];
+    }
+    return [true, 'entregas/' . $base, 'local'];
+}
+
+/**
+ * Formato real de una grabación, mirando sus primeros bytes y no lo que diga
+ * el navegador. Devuelve [extensión, tipo MIME] o null si no es audio válido.
+ */
+function voz_formato(string $ruta): ?array {
+    $fh = @fopen($ruta, 'rb');
+    if (!$fh) return null;
+    $cab = (string) fread($fh, 4096);
+    fclose($fh);
+
+    // WebM (Chrome, Edge, Firefox). Las pistas de vídeo declaran su códec
+    // cerca del principio: si aparece uno, no es una nota de voz.
+    if (strncmp($cab, "\x1A\x45\xDF\xA3", 4) === 0) {
+        if (!str_contains($cab, 'webm')) return null;
+        if (preg_match('/V_(VP8|VP9|AV1|MPEG4)/', $cab)) return null;
+        return ['webm', 'audio/webm'];
+    }
+    if (strncmp($cab, 'OggS', 4) === 0) return ['ogg', 'audio/ogg'];   // Firefox, en algunos casos
+    if (substr($cab, 4, 4) === 'ftyp')  return ['m4a', 'audio/mp4'];   // Safari
+    return null;
+}
+
+/**
+ * Guarda una nota de voz grabada en el navegador.
+ * Devuelve [true, $fila] o [false, 'motivo'].
+ */
+function nota_voz_guardar(array $archivo, int $entregaId, ?int $faseId, int $usuarioId, int $duracion): array {
+    $err = $archivo['error'] ?? UPLOAD_ERR_NO_FILE;
+    if ($err !== UPLOAD_ERR_OK) {
+        return [false, in_array($err, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)
+            ? 'La grabación supera el tamaño que admite el servidor.'
+            : 'La grabación no llegó completa. Inténtalo de nuevo.'];
+    }
+    $tmp = (string) ($archivo['tmp_name'] ?? '');
+    if (!is_uploaded_file($tmp)) return [false, 'La subida no es válida.'];
+
+    $bytes = (int) ($archivo['size'] ?? 0);
+    if ($bytes < 1000) return [false, 'La grabación está vacía.'];
+    if ($bytes > VOZ_MAX_BYTES) {
+        return [false, 'La nota de voz pesa ' . adjunto_peso($bytes) . ' y el máximo es '
+                     . adjunto_peso(VOZ_MAX_BYTES) . '.'];
+    }
+
+    $formato = voz_formato($tmp);
+    if (!$formato) return [false, 'El archivo no es una grabación de audio válida.'];
+    [$ext, $mime] = $formato;
+
+    // La duración la informa el navegador y sirve para mostrarla. El límite
+    // de verdad lo ponen el corte a los cinco minutos y el tope de tamaño.
+    $duracion = max(1, min(VOZ_MAX_SEGUNDOS, $duracion));
+
+    [$ok, $clave, $almacen] = adjunto_almacenar($tmp, $entregaId, $ext, $mime, 'voz-');
+    if (!$ok) return [false, $clave];
+
+    $id = insertar('entrega_adjuntos', [
+        'entrega_id'   => $entregaId,
+        'fase_id'      => $faseId ?: null,
+        'subido_por'   => $usuarioId,
+        'nombre'       => 'Nota de voz ' . date('Y-m-d H.i') . '.' . $ext,
+        'clave'        => $clave,
+        'almacen'      => $almacen,
+        'tipo'         => $mime,
+        'extension'    => $ext,
+        'bytes'        => $bytes,
+        'duracion_seg' => $duracion,
+    ]);
+    auditar('nota_voz_subida', 'entregas', $entregaId, adjunto_duracion($duracion) . ' · ' . adjunto_peso($bytes));
+
+    return [true, fila('SELECT * FROM entrega_adjuntos WHERE id = ?', [$id]) ?? []];
+}
+
+function adjunto_es_audio(array $a): bool {
+    return str_starts_with((string) ($a['tipo'] ?? ''), 'audio/');
+}
+
+/** 135 → «2:15». */
+function adjunto_duracion(?int $seg): string {
+    if (!$seg) return '';
+    return intdiv($seg, 60) . ':' . str_pad((string) ($seg % 60), 2, '0', STR_PAD_LEFT);
+}
+
+/** Lo que necesita el navegador para pintar un adjunto recién guardado. */
+function adjunto_json(array $a): array {
+    $id = (int) $a['id'];
+    return [
+        'id'         => $id,
+        'nombre'     => $a['nombre'],
+        'extension'  => $a['extension'],
+        'etiqueta'   => adjunto_es_audio($a) ? 'VOZ' : adjunto_etiqueta((string) $a['extension']),
+        'peso'       => adjunto_peso((int) $a['bytes']),
+        'duracion'   => adjunto_duracion(isset($a['duracion_seg']) ? (int) $a['duracion_seg'] : null),
+        'url'        => url('portal/adjunto.php?id=' . $id),
+        'reproducir' => url('portal/adjunto.php?id=' . $id . '&reproducir=1'),
+        'borrable'   => true,
+    ];
 }
 
 /** Adjuntos de una entrega. Con $faseId se filtran los de esa fase. */
@@ -189,9 +292,10 @@ function adjunto_borrar(array $adj): bool {
  * Enlace de descarga. En S3 es un enlace firmado que caduca en minutos, así
  * que no sirve para compartir el trabajo de un estudiante fuera del portal.
  */
-function adjunto_url(array $adj, int $segundos = 300): string {
+function adjunto_url(array $adj, int $segundos = 300, bool $enLinea = false): string {
     if ($adj['almacen'] === 's3') {
-        return s3_url_temporal((string) $adj['clave'], $segundos, (string) $adj['nombre']);
+        return s3_url_temporal((string) $adj['clave'], $segundos, (string) $adj['nombre'],
+                               $enLinea, $enLinea ? (string) $adj['tipo'] : '');
     }
     return URL_SUBIDAS . '/' . $adj['clave'];
 }
@@ -238,10 +342,20 @@ function bloque_adjuntos(int $entregaId, ?int $faseId, array $lista, bool $edita
     $html .= '<ul class="adj-lista" data-adj-lista>';
     foreach ($lista as $a) {
         $puede = $editable && adjunto_borrable_por($a, $u, $bloqueada);
-        $html .= '<li data-id="' . (int) $a['id'] . '">'
-              . '<span class="adj-tipo">' . h(adjunto_etiqueta((string) $a['extension'])) . '</span>'
-              . '<a href="' . url('portal/adjunto.php?id=' . (int) $a['id']) . '">' . h($a['nombre']) . '</a>'
-              . '<span class="adj-peso">' . h(adjunto_peso((int) $a['bytes'])) . '</span>'
+        if (adjunto_es_audio($a)) {
+            // Nota de voz: se escucha aquí mismo. preload="none" para no pedir un
+            // enlace firmado por cada nota al abrir la página, solo al reproducir.
+            $html .= '<li class="es-audio" data-id="' . (int) $a['id'] . '">'
+                  . '<span class="adj-tipo adj-tipo-voz">VOZ</span>'
+                  . '<audio controls preload="none" src="' . h(url('portal/adjunto.php?id=' . (int) $a['id'] . '&reproducir=1')) . '"'
+                  . ' aria-label="' . h($a['nombre']) . '"></audio>'
+                  . '<span class="adj-duracion">' . h(adjunto_duracion(isset($a['duracion_seg']) ? (int) $a['duracion_seg'] : null)) . '</span>';
+        } else {
+            $html .= '<li data-id="' . (int) $a['id'] . '">'
+                  . '<span class="adj-tipo">' . h(adjunto_etiqueta((string) $a['extension'])) . '</span>'
+                  . '<a href="' . url('portal/adjunto.php?id=' . (int) $a['id']) . '">' . h($a['nombre']) . '</a>';
+        }
+        $html .= '<span class="adj-peso">' . h(adjunto_peso((int) $a['bytes'])) . '</span>'
               . ($puede ? '<button type="button" class="adj-quitar" data-quitar="' . (int) $a['id']
                         . '" title="Quitar" aria-label="Quitar ' . h($a['nombre']) . '">&times;</button>' : '')
               . '</li>';
@@ -255,7 +369,12 @@ function bloque_adjuntos(int $entregaId, ?int $faseId, array $lista, bool $edita
               . '<span class="adj-invita"><b>Elige archivos</b> o arrástralos aquí</span>'
               . '<span class="adj-formatos">' . h(implode(' · ', array_keys(ADJUNTO_FAMILIAS)))
               . ' — hasta ' . adjunto_peso(ADJUNTO_MAX_BYTES) . ' cada uno</span>'
-              . '</label>';
+              . '</label>'
+              // Lo construye voz.js; sin JavaScript queda vacío y no se ve.
+              . '<div class="voz" data-voz'
+              . ' data-url="' . url('portal/api/nota_voz.php') . '"'
+              . ' data-max="' . VOZ_MAX_SEGUNDOS . '"'
+              . ' data-max-bytes="' . VOZ_MAX_BYTES . '"></div>';
     } elseif (!$lista) {
         $html .= '<p class="txt-sm txt-muted mb-0">Sin archivos adjuntos.</p>';
     }

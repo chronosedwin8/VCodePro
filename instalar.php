@@ -107,6 +107,8 @@ try {
         ['usuarios',       'ia_habilitada',   "TINYINT(1) NOT NULL DEFAULT 0 AFTER origen"],
         // Identificador de la cuenta en Entra ID, para el ingreso con Microsoft.
         ['usuarios',       'entra_oid',       "VARCHAR(64) DEFAULT NULL AFTER ia_habilitada"],
+        // Duración de las notas de voz, que se reproducen en la página.
+        ['entrega_adjuntos', 'duracion_seg',  "SMALLINT UNSIGNED DEFAULT NULL AFTER bytes"],
         ['calificaciones', 'origen',          "ENUM('docente','ia') NOT NULL DEFAULT 'docente' AFTER comentario"],
         ['entregas',       'ia_calificada_en', "DATETIME DEFAULT NULL AFTER nota_letra"],
     ];

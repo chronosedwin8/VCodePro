@@ -637,3 +637,54 @@ details.plegable[open] > summary { border-bottom: 1px solid var(--border); borde
 /* Botones algo más compactos: en esta tabla hay hasta cinco por fila. */
 .tabla-usuarios td.acc .btn-fila { gap: 5px; }
 .tabla-usuarios td.acc .btn-xs { padding: .26rem .5rem; font-size: .76rem; }
+
+/* ---------- Dictado por voz en el editor ---------- */
+.rico-btn.rico-mic { gap: 5px; padding: 0 9px; }
+.rico-btn.rico-mic span { font-size: .78rem; font-weight: 600; }
+.rico-btn.es-dictando {
+  background: var(--err); border-color: var(--err); color: #fff;
+  animation: vcp-pulso 1.4s ease-in-out infinite;
+}
+.rico-dictado {
+  flex: 1 1 160px; min-width: 0; margin-left: 6px;
+  font-size: .78rem; font-style: italic; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+@keyframes vcp-pulso {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,.45); }
+  50%      { box-shadow: 0 0 0 5px rgba(220,38,38,0); }
+}
+
+/* ---------- Notas de voz ---------- */
+/* Vacío hasta que voz.js lo monta: sin JavaScript no debe verse una caja hueca. */
+.voz:empty { display: none; }
+.voz {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin-top: 8px; padding: .55rem .75rem;
+  background: var(--bg-alt); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.voz-boton { display: inline-flex; align-items: center; gap: 6px; }
+.voz.voz-grabando { border-color: var(--err); background: var(--err-soft); }
+.voz-punto { width: 10px; height: 10px; border-radius: 50%; background: var(--err); animation: vcp-pulso 1.4s ease-in-out infinite; }
+.voz-tiempo { font-variant-numeric: tabular-nums; font-size: .9rem; font-weight: 700; color: var(--text-strong); }
+.voz-tiempo.es-final { color: var(--err); }
+.voz-dato { font-size: .78rem; color: var(--muted); }
+.voz-dato.es-error { color: var(--err); }
+.voz-nivel {
+  flex: 1 1 80px; max-width: 160px; height: 6px; overflow: hidden;
+  background: var(--bg-elev); border: 1px solid var(--border); border-radius: 99px;
+}
+.voz-nivel i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .08s linear; }
+.voz-previa { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; }
+.voz-previa audio { flex: 1 1 240px; height: 34px; max-width: 100%; }
+.voz-barra { flex: 1 1 100%; height: 5px; overflow: hidden; background: var(--bg-elev); border-radius: 99px; }
+.voz-barra i { display: block; height: 100%; width: 0; background: var(--brand); transition: width .15s; }
+
+.adj-lista li.es-audio { flex-wrap: wrap; }
+.adj-lista li.es-audio audio { flex: 1 1 220px; height: 34px; min-width: 0; }
+.adj-tipo-voz { background: var(--err); }
+.adj-duracion { flex: none; font-size: .76rem; font-variant-numeric: tabular-nums; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rico-btn.es-dictando, .voz-punto { animation: none; }
+}

@@ -299,7 +299,158 @@
       if (document.activeElement === area) estadoBotones(barra);
     });
 
+    montarDictado(barra, area);
     return barra;
+  }
+
+  /* ------------------------------------------------------------ dictado -- */
+  /*
+   * Dictado por voz con la Web Speech API del navegador. Funciona en Chrome,
+   * Edge y Safari; en Firefox no existe y el botón simplemente no aparece.
+   * Exige HTTPS (o localhost). En Chrome y Edge el audio lo transcribe un
+   * servicio de Google o de Microsoft, no el portal.
+   *
+   * Solo se escribe en el documento lo que el reconocedor da por definitivo.
+   * Lo provisional se muestra aparte, en la barra: reescribir el texto a cada
+   * sílaba movería el cursor y dispararía el autoguardado sin parar.
+   */
+  var Reconocimiento = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var dictadoActivo = null;          // solo un editor dicta a la vez
+
+  function montarDictado(barra, area) {
+    if (!Reconocimiento || !window.isSecureContext) return;
+
+    var sep = document.createElement("span");
+    sep.className = "rico-sep";
+    sep.setAttribute("aria-hidden", "true");
+
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "rico-btn rico-mic";
+    b.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false">'
+      + '<path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>'
+      + '<span>Dictar</span>';
+    b.title = "Dictar por voz: habla y el texto se escribe solo. Di «nuevo párrafo» para cambiar de párrafo.";
+    b.setAttribute("aria-label", "Dictar por voz");
+    b.setAttribute("aria-pressed", "false");
+
+    var previa = document.createElement("span");
+    previa.className = "rico-dictado";
+    previa.setAttribute("aria-live", "polite");
+    previa.hidden = true;
+
+    barra.appendChild(sep);
+    barra.appendChild(b);
+    barra.appendChild(previa);
+
+    var rec = null;
+    var quiereSeguir = false;
+    var hayError = false;
+
+    function parar() {
+      quiereSeguir = false;
+      if (rec) { try { rec.stop(); } catch (e) {} }
+    }
+
+    function reflejar(activo, texto) {
+      b.classList.toggle("es-dictando", activo);
+      b.setAttribute("aria-pressed", activo ? "true" : "false");
+      b.querySelector("span").textContent = activo ? "Detener" : "Dictar";
+      previa.hidden = !texto;
+      previa.textContent = texto || "";
+    }
+
+    function insertar(texto) {
+      texto = texto.trim();
+      if (!texto) return;
+      if (document.activeElement !== area) {
+        // Si el estudiante hizo clic en otra parte, se sigue escribiendo al final.
+        area.focus();
+        var sel = window.getSelection();
+        var r = document.createRange();
+        r.selectNodeContents(area);
+        r.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+      // «Nuevo párrafo» y «punto y aparte» son órdenes, no palabras que escribir.
+      texto.split(/\b(?:nuevo p[aá]rrafo|punto y aparte)\b/i).forEach(function (trozo, i) {
+        if (i > 0) document.execCommand("insertParagraph", false, null);
+        trozo = trozo.trim();
+        if (!trozo) return;
+        var antes = textoAntesDelCursor(area);
+        if (antes.trim() === "" || /[.!?]\s*$/.test(antes)) {
+          trozo = trozo.charAt(0).toUpperCase() + trozo.slice(1);
+        }
+        var espacio = antes !== "" && !/\s$/.test(antes) ? " " : "";
+        // insertText dispara «input»: el autoguardado de la fase se entera solo.
+        document.execCommand("insertText", false, espacio + trozo);
+      });
+    }
+
+    b.addEventListener("mousedown", function (e) { e.preventDefault(); });
+    b.addEventListener("click", function () {
+      if (dictadoActivo === parar && quiereSeguir) { parar(); return; }
+      if (dictadoActivo) dictadoActivo();          // otro editor estaba dictando
+
+      rec = new Reconocimiento();
+      rec.lang = "es-CO";
+      rec.continuous = true;
+      rec.interimResults = true;
+      quiereSeguir = true;
+      hayError = false;
+      dictadoActivo = parar;
+      area.focus();
+
+      rec.onresult = function (ev) {
+        var provisional = "";
+        for (var i = ev.resultIndex; i < ev.results.length; i++) {
+          var r = ev.results[i];
+          if (r.isFinal) insertar(r[0].transcript);
+          else provisional += r[0].transcript;
+        }
+        reflejar(true, provisional ? "… " + provisional : "Escuchando…");
+      };
+
+      rec.onerror = function (ev) {
+        if (ev.error === "no-speech" || ev.error === "aborted") return;
+        quiereSeguir = false;
+        hayError = true;
+        var msg = {
+          "not-allowed": "Permite el micrófono en el navegador para dictar.",
+          "service-not-allowed": "El navegador no permite dictar en esta página.",
+          "audio-capture": "No se encontró ningún micrófono.",
+          "network": "El dictado necesita conexión a internet."
+        }[ev.error] || "El dictado se detuvo.";
+        reflejar(false, msg);
+        setTimeout(function () { if (!quiereSeguir) reflejar(false, ""); }, 6000);
+      };
+
+      rec.onend = function () {
+        // Chrome corta el reconocimiento tras un silencio largo; si nadie pidió
+        // parar, se reanuda para que el dictado no se apague solo.
+        if (quiereSeguir) {
+          try { rec.start(); return; } catch (e) { quiereSeguir = false; }
+        }
+        if (dictadoActivo === parar) dictadoActivo = null;
+        if (!hayError) reflejar(false, "");
+      };
+
+      try { rec.start(); reflejar(true, "Escuchando…"); }
+      catch (e) { quiereSeguir = false; dictadoActivo = null; reflejar(false, "No se pudo iniciar el dictado."); }
+    });
+  }
+
+  function textoAntesDelCursor(area) {
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !area.contains(sel.getRangeAt(0).startContainer)) {
+      return area.textContent || "";
+    }
+    var actual = sel.getRangeAt(0);
+    var r = document.createRange();
+    r.selectNodeContents(area);
+    r.setEnd(actual.startContainer, actual.startOffset);
+    return r.toString();
   }
 
   function ejecutar(cmd, valor, area) {

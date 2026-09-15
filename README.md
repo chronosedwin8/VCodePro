@@ -268,6 +268,7 @@ vcodeproplus/
     ├── js/editor.js               Editor enriquecido sobre los textarea del portal
     ├── js/adjuntos.js             Subida de archivos sin recargar la página
     ├── js/ia.js                   Calificación de un grupo y redacción de actividades
+    ├── js/voz.js                  Grabación de notas de voz, optimizada antes de subir
     └── uploads/                   Entregas y avatares (fuera del control de versiones)
 ```
 
@@ -363,6 +364,27 @@ Los archivos se guardan en **Amazon S3** si está configurado y, si no, en el di
 servidor; el portal funciona igual en los dos casos. Ver `includes/s3.php`, que firma las
 peticiones con SigV4 a mano —el proyecto no usa Composer— y `includes/adjuntos.php`.
 
+### Dictado y notas de voz
+
+En cada caja donde el estudiante responde hay dos formas de hacerlo hablando:
+
+- **Dictar.** El botón del micrófono en la barra del editor escribe lo que se dice, en
+  español de Colombia. «Nuevo párrafo» o «punto y aparte» cambian de párrafo. Usa la Web
+  Speech API del navegador: funciona en Chrome, Edge y Safari; en Firefox no existe y el
+  botón no aparece. En Chrome y Edge el audio lo transcribe un servicio de Google o de
+  Microsoft, no el portal.
+- **Grabar una nota de voz** de hasta cinco minutos, junto a los adjuntos de la fase o de
+  la entrega. El estudiante la escucha antes de guardarla y puede repetirla. Se corta sola a
+  los cinco minutos.
+
+**La nota se optimiza en el navegador, antes de subir**: se graba en mono, con supresión de
+ruido y en Opus a 24 kbps (AAC en Safari). Cinco minutos pesan menos de 1 MB, frente a los
+28,8 MB del mismo audio sin comprimir. El servidor no se fía de lo que diga el navegador:
+comprueba por los primeros bytes que es audio —rechaza un vídeo con extensión `.webm`— y
+aplica un tope de 8 MB. Se guarda en S3 como cualquier adjunto, y se reproduce en la página
+con un enlace firmado `inline` que solo se concede a archivos de audio. El docente puede
+dejar también su retroalimentación como nota de voz.
+
 ### Asistente de IA para el docente
 
 Un docente habilitado puede pedirle al asistente que califique **todas las entregas de un
@@ -436,6 +458,8 @@ Se configura en Ajustes → Asistente de IA. Modelo por defecto: `gemini-3.8-fla
 - Las calificaciones que propone la IA no llegan al estudiante: las notas solo se ven
   cuando el docente devuelve el trabajo, y la retroalimentación del asistente entra como
   comentario privado hasta que él la publica.
+- Las notas de voz se validan por su contenido y no por su nombre, y el enlace para
+  reproducirlas en la página (`inline`) solo se concede a archivos de audio.
 - Los adjuntos viven en un bucket de S3 **privado**. El portal nunca publica su dirección:
   comprueba primero quién pide qué —solo el dueño de la entrega, su docente y la
   administración— y luego redirige a un enlace firmado que caduca en cinco minutos. Lo que

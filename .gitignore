@@ -25,3 +25,6 @@ assets/uploads/cache/*
 # correos y hashes de contraseñas—, así que nunca se versionan.
 db/*.sql
 !db/schema.sql
+
+# Copias preparadas para el servidor: llevan credenciales reales.
+paradespliegue/

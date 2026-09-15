@@ -391,6 +391,30 @@ debería significar que cualquiera con correo del dominio se cree una cuenta sin
 lo mire.
 
 ---
+## 10 sexies. Micrófono: dictado y notas de voz
+
+No hay nada que instalar, pero hay tres condiciones que, si fallan, hacen que el botón del
+micrófono no aparezca o no funcione sin un mensaje claro:
+
+1. **HTTPS obligatorio.** Los navegadores solo dan acceso al micrófono en páginas seguras.
+   En `http://` el dictado no aparece y el grabador avisa de que hace falta https.
+2. **Que ninguna cabecera bloquee el micrófono.** Si en el vhost añadiste una
+   `Permissions-Policy`, tiene que permitirlo para el propio sitio:
+
+   ```nginx
+   add_header Permissions-Policy "microphone=(self)" always;
+   ```
+
+   El portal no envía esa cabecera; CloudPanel tampoco la pone de fábrica.
+3. **Tamaño de subida.** Una nota de cinco minutos pesa menos de 1 MB, pero Safari graba en
+   AAC y el portal admite hasta 8 MB por nota. Los 30 MB de los pasos 5 y 6 sobran.
+
+Conviene avisar a las familias de que **el dictado de Chrome y Edge envía el audio a Google o
+a Microsoft** para transcribirlo. Las notas de voz no: se graban en el navegador y van
+directamente al bucket privado del colegio.
+
+---
+
 ## 11. Verificación final
 
 ```bash

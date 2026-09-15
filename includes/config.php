@@ -67,6 +67,12 @@ define('SUBIDA_EXTENSIONES', ['pdf','zip','py','js','html','css','txt','md','png
 // Lo que un estudiante puede adjuntar a una entrega, por familias. Es una
 // lista blanca: nada de .exe, .bat, .js suelto ni nada ejecutable.
 define('ADJUNTO_MAX_BYTES', 25 * 1024 * 1024);
+
+// Notas de voz: cinco minutos como máximo. El navegador graba en mono y a
+// 24 kbps, unos 180 KB por minuto; el tope de tamaño da margen a Safari, que
+// graba en AAC y no siempre respeta la tasa pedida.
+define('VOZ_MAX_SEGUNDOS', 300);
+define('VOZ_MAX_BYTES', 8 * 1024 * 1024);
 define('ADJUNTO_FAMILIAS', [
     'Documentos'       => ['pdf','doc','docx','odt','rtf','txt','md'],
     'Hojas de cálculo' => ['xls','xlsx','ods','csv','tsv'],
