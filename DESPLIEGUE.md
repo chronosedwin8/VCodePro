@@ -508,6 +508,10 @@ sudo -u vcodepro rm -f $D/instalar.php
 `instalar.php` se borra tras usarlo, así que `git status` muestra siempre esa única
 eliminación; `git pull` lo vuelve a traer y hay que volver a borrarlo.
 
+> **No abras `instalar.php` en el navegador de un servidor en producción.** Desde la versión
+> del 16 de septiembre de 2026 el instalador web ya no siembra la demostración, pero sigue
+> siendo un archivo que no debe quedar accesible: bórralo y déjalo bloqueado en Nginx.
+
 **Siempre con `--sin-demo`.** Sin él, cada actualización volvería a sembrar los docentes,
 estudiantes y grupos de ejemplo dentro de tu matrícula real.
 

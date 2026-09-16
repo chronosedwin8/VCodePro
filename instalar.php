@@ -49,12 +49,20 @@ define('ADMIN_CLAVE', $claveGenerada
  * docentes, grupos y entregas de ejemplo estorban y ensucian los informes.
  *
  *   php instalar.php --sin-demo
+ *
+ * Desde el navegador el instalador nunca siembra los datos de demostración:
+ * eso solo ocurre con «php instalar.php» en la consola, sin --sin-demo.
  *   set VCP_SIN_DEMO=1   (Windows)
  *
  * El esquema, los niveles, el banco de actividades, las insignias, los ajustes
  * y la cuenta de administración se crean igual: eso sí hace falta siempre.
  */
-define('SIN_DEMO', (bool) (getenv('VCP_SIN_DEMO') ?: ($cli && in_array('--sin-demo', $argv, true))));
+// Los datos de demostración SOLO se siembran desde la línea de comandos y sin
+// --sin-demo. Por web nunca: abrir instalar.php en el navegador de un servidor
+// con matrícula real sembraba docentes, estudiantes, grupos y entregas de
+// ejemplo, porque $argv no existe y --sin-demo no se podía indicar. Pasó el
+// 2026-09-16 en producción al comprobar si el archivo estaba accesible.
+define('SIN_DEMO', !$cli || (bool) (getenv('VCP_SIN_DEMO') ?: in_array('--sin-demo', $argv, true)));
 
 $NOMBRES_DEMO = [
     ['Mariana', 'Acosta Rivera'], ['Samuel', 'Bermúdez Lozano'], ['Valeria', 'Cárdenas Pineda'],
@@ -362,8 +370,11 @@ try {
     // ------------------------------------- 9. datos de demostración -------
     // Un servidor con matrícula real no debe tener nada de esto.
     if (SIN_DEMO) {
-        nota('Modo sin demostración: no se crearon docentes, estudiantes, grupos, '
-           . 'asignaciones, entregas ni datos comerciales de ejemplo.');
+        nota($cli
+            ? 'Modo sin demostración: no se crearon docentes, estudiantes, grupos, '
+              . 'asignaciones, entregas ni datos comerciales de ejemplo.'
+            : 'Instalación desde el navegador: los datos de demostración no se siembran nunca por '
+              . 'esta vía. Si los quieres, ejecuta <code>php instalar.php</code> en la consola.');
     } else {
         require __DIR__ . '/db/seed/demostracion.php';
     }
