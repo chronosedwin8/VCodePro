@@ -487,12 +487,26 @@ El código se recupera del repositorio; `includes/config.local.php` hay que guar
 
 ## 13. Actualizaciones posteriores
 
+El directorio del sitio **es un clon del repositorio** desde el despliegue del 16 de septiembre
+de 2026, así que se actualiza con `git pull`. Todo corre como el usuario del sitio: si se
+ejecuta como `admin` o `root`, los archivos quedan con dueño equivocado y el portal deja de
+poder escribir.
+
 ```bash
-cd /home/vcodepro/htdocs/www.vcodepro.de
-git pull
-php instalar.php --sin-demo   # idempotente: aplica migraciones y actualiza el banco
-rm -f instalar.php
+D=/home/vcodepro/htdocs/www.vcodepro.de
+
+# 1. Respaldar antes de tocar nada
+mysqldump -uvcodepro -p --single-transaction --routines --triggers vcodepro > ~/respaldos/vcodepro-$(date +%F).sql
+sudo tar czf ~/respaldos/sitio-$(date +%F).tar.gz -C /home/vcodepro/htdocs www.vcodepro.de
+
+# 2. Traer el código y aplicar migraciones
+sudo -u vcodepro git -C $D pull
+sudo -u vcodepro bash -c "cd $D && php instalar.php --sin-demo"
+sudo -u vcodepro rm -f $D/instalar.php
 ```
+
+`instalar.php` se borra tras usarlo, así que `git status` muestra siempre esa única
+eliminación; `git pull` lo vuelve a traer y hay que volver a borrarlo.
 
 **Siempre con `--sin-demo`.** Sin él, cada actualización volvería a sembrar los docentes,
 estudiantes y grupos de ejemplo dentro de tu matrícula real.
@@ -502,6 +516,31 @@ versión añade columnas nuevas, las aplica en el paso de migraciones. Las fases
 actividades y los criterios de rúbrica se actualizan en su sitio, sin borrarlos: de lo
 contrario las cascadas de la base de datos se llevarían por delante el trabajo escrito de los
 estudiantes y sus calificaciones.
+
+---
+
+## 14. Rutas que el servidor nunca debe entregar
+
+El vhost de Nginx lleva estos bloques **en los dos `server`** (el de 443 y el interno de 8080),
+justo después de `root`. Sin ellos, Nginx entrega como archivo estático todo lo que exista en
+disco: en el despliegue del 16 de septiembre de 2026 se encontraron descargables una copia de la
+base de datos con la matrícula real y la caché de Phidias con nombres y documentos de menores.
+
+```nginx
+  location ^~ /db/ { deny all; }
+  location ^~ /includes/ { deny all; }
+  location ^~ /paradespliegue/ { deny all; }
+  location ^~ /assets/uploads/cache/ { deny all; }
+  location ~* \.(sql|md|ppk|pem|log|bak|ini)$ { deny all; }
+  location ~* ^/(instalar|estudiante_demo)\.php$ { deny all; }
+```
+
+Después: `sudo nginx -t && sudo systemctl reload nginx`. Comprueba con
+`curl -o /dev/null -w "%{http_code}\n" https://www.vcodepro.de/db/schema.sql`, que debe
+responder `403`.
+
+**Las copias de la base de datos no se guardan dentro del directorio del sitio**, ni siquiera
+un momento: van a `~/respaldos` del usuario `admin`, fuera de la raíz web.
 
 ---
 
