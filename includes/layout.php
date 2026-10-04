@@ -222,7 +222,7 @@ function pie(array $op = []): void {
 </div>
 <footer class="pt-foot">
   <span>&copy; <?= date('Y') ?> <?= APP_NOMBRE ?> · <?= APP_LEMA ?></span>
-  <span><a href="<?= url('privacidad.html') ?>">Privacidad</a> · <a href="<?= url('documentacion.html') ?>">Documentación</a></span>
+  <span><a href="<?= url('terminos.html') ?>">Términos</a> · <a href="<?= url('privacidad.html') ?>">Privacidad</a> · <a href="<?= url('reembolsos.html') ?>">Reembolsos</a> · <a href="<?= url('documentacion.html') ?>">Documentación</a></span>
 </footer>
 <?php endif; ?>
 <script src="<?= url('assets/js/portal.js') ?>"></script>

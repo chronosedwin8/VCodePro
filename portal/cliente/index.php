@@ -51,7 +51,7 @@ cabecera('Panel del cliente', [
         <a class="txt-sm" href="<?= url('portal/cliente/licencias.php') ?>">Ver detalle</a>
       </div>
       <?php if (!$licencias): ?>
-        <div style="padding:20px"><p class="txt-muted mb-0">No hay licencias asociadas a tu cuenta. Escribe a <?= h(ajuste('contacto_soporte', 'soporte@vcodepro.de')) ?>.</p></div>
+        <div style="padding:20px"><p class="txt-muted mb-0">No hay licencias asociadas a tu cuenta. Escribe a <?= h(ajuste('contacto_soporte', 'gestion@grupologiclatam.com')) ?>.</p></div>
       <?php else: ?>
         <div class="tabla-caja">
           <table class="tabla">

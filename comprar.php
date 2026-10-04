@@ -176,7 +176,7 @@ cabecera('Comprar una licencia', ['publica' => true]);
     <li><i>✓</i><span><b>Portal académico incluido</b><?= $actividades ?> actividades del ciclo de diseño, de 6.º a 12.º.</span></li>
     <li><i>✓</i><span><b>Acceso inmediato</b>La licencia se activa apenas Mercado Pago acredita el pago.</span></li>
     <li><i>✓</i><span><b>Pago seguro</b>Pagas en el sitio de Mercado Pago; en el extracto de la tarjeta figura <?= h(MP_DESCRIPTOR) ?>.</span></li>
-    <li><i>✓</i><span><b>Sin impuestos añadidos</b>Valor final: la licencia se vende como servicio digital internacional.</span></li>
+    <li><i>✓</i><span><b>Impuestos claros</b>Precio en pesos colombianos; lo que corresponda se muestra antes de confirmar el pago.</span></li>
   </ul>
 </section>
 
@@ -250,7 +250,7 @@ cabecera('Comprar una licencia', ['publica' => true]);
       <?php endif; ?>
       <label class="check">
         <input type="checkbox" name="acepto" value="1" required>
-        <span>Acepto los <a href="<?= url('privacidad.html') ?>" target="_blank">términos de uso y la política de privacidad</a>.</span>
+        <span>Acepto los <a href="<?= url('terminos.html') ?>" target="_blank">términos de servicio</a>, el <a href="<?= url('privacidad.html') ?>" target="_blank">aviso de privacidad</a> y la <a href="<?= url('reembolsos.html') ?>" target="_blank">política de reembolso</a>.</span>
       </label>
       <button class="btn btn-block btn-lg" type="submit" <?= $u && !$esCliente ? 'disabled' : '' ?>>Continuar al pago · <span id="compra-boton"><?= h($resumen['total']) ?></span></button>
     </form>

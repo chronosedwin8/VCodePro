@@ -71,7 +71,7 @@ cabecera('Facturas', [
     <?php endif; ?>
   </dl>
   <p class="txt-sm txt-muted mt-2 mb-0">
-    Valores finales sin impuestos añadidos: VCodePro tiene sede en Alemania y la licencia se vende como servicio digital internacional.
+    Valores en pesos colombianos: los impuestos que correspondan se muestran antes de confirmar el pago. La factura la emite Grupo Logic SAS Latinoamérica.
   </p>
 </div>
 <?php endif; ?>

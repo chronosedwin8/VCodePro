@@ -63,7 +63,7 @@ cabecera('Pagar factura', [
 <?php if (!mp_configurado()): ?>
   <div class="aviso aviso-warn">
     <div><strong>La pasarela no está configurada todavía.</strong>
-      Escribe a <a href="mailto:<?= h(ajuste('contacto_soporte', 'soporte@vcodepro.de')) ?>"><?= h(ajuste('contacto_soporte', 'soporte@vcodepro.de')) ?></a>
+      Escribe a <a href="mailto:<?= h(ajuste('contacto_soporte', 'gestion@grupologiclatam.com')) ?>"><?= h(ajuste('contacto_soporte', 'gestion@grupologiclatam.com')) ?></a>
       para coordinar el pago por transferencia.</div>
   </div>
 <?php elseif (mp_entorno() === 'prueba'): ?>

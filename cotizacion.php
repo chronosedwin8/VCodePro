@@ -138,8 +138,9 @@ pdf_linea($pdf, $m, $y, $der, $y, '#0078d4', 1);
 $y += 20;
 foreach ([
     'Los precios están expresados en pesos colombianos y son valores finales.',
-    'Venta digital internacional facturada desde Alemania, sin impuestos añadidos.',
+    'Los impuestos que correspondan se muestran antes de confirmar el pago.',
     'La vigencia de las licencias inicia el día en que se acredita el pago.',
+    'Hay 14 días para solicitar el reembolso: www.vcodepro.de/reembolsos.html',
     'Incluye actualizaciones y soporte durante toda la vigencia.',
     'En el extracto de la tarjeta el cobro figura como VCODEPRO.',
 ] as $cond) {
@@ -163,13 +164,13 @@ if ($plan !== 'personal' && $periodo === 'mensual') {
         'El valor mensual es de referencia: el plan ' . $datos['nombre'] . ' se paga por año (' . plan_pesos($anual($plan)) . ').', 10);
 }
 $y = pdf_parrafo($pdf, $m, $y + 2, $der - $m,
-    'Orden de compra, transferencia o condiciones especiales: licencias@vcodepro.de', 10);
+    'Orden de compra, transferencia o condiciones especiales: gestion@grupologiclatam.com', 10);
 
 // Pie
 // Pie en dos líneas: en una sola, la frase larga pisaba el texto de la derecha.
 pdf_linea($pdf, $m, PDF_ALTO - 62, $der, PDF_ALTO - 62, '#d8dee6');
 pdf_texto($pdf, $m, PDF_ALTO - 46, 'Cotización de referencia generada en ' . $sitio . ' con los precios vigentes el ' . $larga($hoy) . '.', 8, false, '#56616e');
-pdf_texto($pdf, $m, PDF_ALTO - 33, 'VCodePro · Berlín, Alemania · licencias@vcodepro.de', 8, false, '#56616e');
+pdf_texto($pdf, $m, PDF_ALTO - 33, 'VCodePro · Grupo Logic SAS Latinoamérica · gestion@grupologiclatam.com', 8, false, '#56616e');
 
 $documento = pdf_salida($pdf);
 

@@ -192,7 +192,7 @@ cabecera('Soporte', [
     <div class="panel">
       <div class="panel-h"><h3>Contacto directo</h3></div>
       <p class="txt-sm mb-0">
-        Correo de soporte: <a href="mailto:<?= h(ajuste('contacto_soporte', 'soporte@vcodepro.de')) ?>"><?= h(ajuste('contacto_soporte', 'soporte@vcodepro.de')) ?></a><br>
+        Correo de soporte: <a href="mailto:<?= h(ajuste('contacto_soporte', 'gestion@grupologiclatam.com')) ?>"><?= h(ajuste('contacto_soporte', 'gestion@grupologiclatam.com')) ?></a><br>
         <span class="txt-muted">Atención de lunes a viernes. Las solicitudes de prioridad alta se atienden el mismo día lectivo.</span>
       </p>
     </div>
